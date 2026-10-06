@@ -40,6 +40,11 @@ VERILOG_FILES:
 # Slightly smaller file sizes
 PRIMARY_GDSII_STREAMOUT_TOOL: klayout
 
+# croc_soc is merged into chip_top from its own GDS, and the cell already exists (empty) from the LEF.
+# With the default RenameCell the macro content lands in an orphan "croc_soc$1" and the chip GDS
+# keeps an empty croc_soc, so every KLayout check silently skips the macro.
+KLAYOUT_CONFLICT_RESOLUTION: OverwriteCell
+
 # SDC files
 PNR_SDC_FILE: dir::chip_top.sdc
 SIGNOFF_SDC_FILE: dir::chip_top.sdc
@@ -64,7 +69,7 @@ IGNORE_DISCONNECTED_MODULES:
 # Clock
 CLOCK_PORT: clk_PAD
 CLOCK_NET: clk_pad/Y
-CLOCK_PERIOD: 40 # 25 MHz
+CLOCK_PERIOD: 55 # 18.18 MHz, matches the croc_soc signoff period
 
 # Overfix hold violations
 PL_RESIZER_HOLD_SLACK_MARGIN: 0.35
@@ -75,8 +80,11 @@ GRT_RESIZER_HOLD_SLACK_MARGIN: 0.3
 PL_TARGET_DENSITY_PCT: 35
 GRT_ALLOW_CONGESTION: true
 
-# Allow a larger Y displacement
-PL_MAX_DISPLACEMENT_Y: 200
+# repair_design puts buffers along the long pad-to-macro nets, some inside the macro footprint where
+# there are no rows. The nearest row can be ~500 um away, beyond the old 500/200 limit, and
+# detailed placement failed on those buffers.
+PL_MAX_DISPLACEMENT_X: 1000
+PL_MAX_DISPLACEMENT_Y: 1000
 
 # Fix antenna violations after DRT
 DRT_ANTENNA_REPAIR_ITERS: 10
@@ -95,6 +103,17 @@ PDN_VPITCH: 75
 PDN_HPITCH: 75
 
 # PDN - Core ring
+# croc_soc's own boundary power ring sits 13um inset from its macro
+# footprint (2um create_pg_ring_pattern offset + croc_soc's own
+# DIE_AREA/CORE_AREA margin) -- confirmed by reading its exported LEF pin
+# geometry directly. The default PDN_HORIZONTAL_HALO/PDN_VERTICAL_HALO
+# (10um) falls short of that, so the parent grid never reaches inward far
+# enough to via-stitch onto croc_soc's ring -- confirmed the cause of
+# OpenROAD.IRDropReport's fatal PSM-0069 ("Check connectivity failed"),
+# all 4 ring shapes reported unconnected. 15um clears it with margin.
+PDN_HORIZONTAL_HALO: 5
+PDN_VERTICAL_HALO: 5
+
 PDN_CORE_RING: True
 # Maximum metal width without slotting: 30um
 PDN_CORE_RING_VWIDTH: 25

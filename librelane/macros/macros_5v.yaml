@@ -78,32 +78,36 @@ MACROS:
         location: [26, "expr::$DIE_AREA[3] - 169.25"]
         orientation: N
 
-  # 5V SRAM
-  gf180mcu_fd_ip_sram__sram512x8m8wm1:
+  # croc_soc -- external RISC-V SoC macro from the sibling manquehue_chip
+  # project, integrated here as a hardened macro (not resynthesized RTL).
+  # Physical views are referenced live from manquehue_chip's own outputs/latest/
+  # rather than copied into this repo's ip/ tree, so a fresh croc_soc build
+  # (make all in manquehue_chip) is picked up automatically without manual
+  # re-syncing. GDS/LEF come straight from Fusion Compiler (06_finish.tcl:
+  # create_frame + write_lef). The liberty views are PrimeTime timing models
+  # extracted per corner from the finished run (scripts/pt/extract_models.sh,
+  # written to outputs/latest/etm/), so the chip-level STA times through the
+  # macro. The Verilog stub is hand-written and lives in
+  # manquehue_chip/integration/ (it only changes when the port list does).
+  croc_soc:
     gds:
-      - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/gds/gf180mcu_fd_ip_sram__sram512x8m8wm1.gds
+      - dir::../../manquehue_chip/outputs/latest/croc_soc.gds
     lef:
-      - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lef/gf180mcu_fd_ip_sram__sram512x8m8wm1.lef
+      - dir::../../manquehue_chip/outputs/latest/croc_soc.lef
     vh:
-      - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram512x8m8wm1__blackbox_pp.v
+      - dir::../../manquehue_chip/integration/croc_soc_blackbox.v
     lib:
       "*_tt_025C_5v00":
-        - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram512x8m8wm1__tt_025C_5v00.lib
+        - dir::../../manquehue_chip/outputs/latest/etm/croc_soc_typical.lib
       "*_ff_n40C_5v50":
-        - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram512x8m8wm1__ff_n40C_5v50.lib
+        - dir::../../manquehue_chip/outputs/latest/etm/croc_soc_fast.lib
       "*_ss_125C_4v50":
-        - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram512x8m8wm1__ss_125C_4v50.lib
+        - dir::../../manquehue_chip/outputs/latest/etm/croc_soc_slow.lib
     instances:
-      # Make sure to specify the SRAMs in pdn_cfg.tcl
-      i_chip_core.sram_0:
-        location: [490, 500]
+      # Centered away from the corner ID/logo/marker macros (all clustered
+      # near the die edges/corners below) -- comfortable margin on all sides
+      # of croc_soc's 1019.92 x 1790.48 um footprint within the 0p5x1 slot's
+      # 1052 x 4238 um core area (x 442..1494).
+      i_chip_core.i_croc_soc:
+        location: [458, 1000]
         orientation: N
-      i_chip_core.sram_1:
-        location: [970, 500]
-        orientation: E
-
-# This is an alternative method compared to
-# specifying the power connections in the RTL
-PDN_MACRO_CONNECTIONS:
-- "i_chip_core.sram_0 VDD VSS VDD VSS"
-- "i_chip_core.sram_1 VDD VSS VDD VSS"
