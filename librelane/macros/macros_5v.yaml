@@ -104,10 +104,13 @@ MACROS:
       "*_ss_125C_4v50":
         - dir::../../manquehue_chip/outputs/latest/etm/croc_soc_slow.lib
     instances:
-      # Centered away from the corner ID/logo/marker macros (all clustered
-      # near the die edges/corners below) -- comfortable margin on all sides
-      # of croc_soc's 1019.92 x 1790.48 um footprint within the 0p5x1 slot's
-      # 1052 x 4238 um core area (x 442..1494).
+      # Bottom-left of the core (core area x 442..1494, y 442..4680; croc_soc is
+      # 1019.92 x 1790.48 um): 16 um in from the left core edge and 48 um above the
+      # bottom edge. The bottom pads carry the QSPI/JTAG pins, so this keeps those nets
+      # short. Keep the strip of standard-cell rows below the macro: at y=458 (no rows
+      # below) detailed placement failed (DPL-0036) on buffers that repair_design puts
+      # inside the macro footprint. The ID/logo/marker macros sit in the die corners
+      # outside the core.
       i_chip_core.i_croc_soc:
-        location: [458, 1000]
+        location: [458, 490]
         orientation: N

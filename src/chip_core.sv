@@ -62,21 +62,25 @@ module chip_core #(
     // bidir[13] = jtag_tdi_i   (input-only, oe=0 always)
     // bidir[14] = jtag_trst_ni (input-only, oe=0 always)
     // bidir[15] = uart_rx_i    (input-only, oe=0 always)
+    // bidir[16] = scan_si_i    (input-only, oe=0 always, pull-down)
+    // bidir[17] = scan_se_i    (input-only, oe=0 always, pull-down: an open pad means scan off)
+    // bidir[18] = scan_so_o    (output, oe=1 always)
     //
     // Everything beyond these is left as a spare input-mode pad
     // (oe=0) with a pull-down enabled, to avoid a floating node.
     //
-    // Hard requirement: NUM_INPUT_PADS >= 4 and NUM_BIDIR_PADS >= 16.
+    // Hard requirement: NUM_INPUT_PADS >= 4 and NUM_BIDIR_PADS >= 19.
     // True for both slot 1x1 (12 input / 40 bidir) and slot 0p5x1
     // (4 input / 44 bidir).
 
-    localparam int NUM_BIDIR_USED = 16;
+    localparam int NUM_BIDIR_USED = 19;
 
     logic status_o, jtag_tdo_o, uart_tx_o, qspi_clk_o;
     logic [2:0] qspi_csn_o;
     logic [3:0] qspi_sd_o, qspi_sd_i, qspi_sd_en_o;
     logic [1:0] gpio_i, gpio_o, gpio_out_en_o;
     logic jtag_tdi_i, jtag_trst_ni, uart_rx_i;
+    logic scan_si_i, scan_se_i, scan_so_o;
 
     croc_soc i_croc_soc (
         `ifdef USE_POWER_PINS
@@ -88,6 +92,9 @@ module chip_core #(
         .rst_ni         (rst_n),
         .ref_clk_i      (input_in[0]),
         .testmode_i     (input_in[1]),
+        .scan_si_i      (scan_si_i),
+        .scan_se_i      (scan_se_i),
+        .scan_so_o      (scan_so_o),
         .status_o       (status_o),
 
         .jtag_tck_i     (input_in[2]),
@@ -119,6 +126,7 @@ module chip_core #(
 
     // Bidir pads used by croc_soc
     wire [NUM_BIDIR_USED-1:0] bidir_out_used = {
+        scan_so_o, 1'b0, 1'b0,                  // bidir[18:16]: scan_so_o, scan_se_i, scan_si_i
         1'b0, 1'b0, 1'b0,                       // bidir[15:13] input-only, no output drive
         gpio_o[1], gpio_o[0],
         qspi_sd_o[3], qspi_sd_o[2], qspi_sd_o[1], qspi_sd_o[0],
@@ -126,6 +134,7 @@ module chip_core #(
         qspi_clk_o, uart_tx_o, jtag_tdo_o, status_o
     };
     wire [NUM_BIDIR_USED-1:0] bidir_oe_used = {
+        1'b1, 1'b0, 1'b0,                       // bidir[18:16]: scan_so_o drives, scan_se_i/scan_si_i input-only
         1'b0, 1'b0, 1'b0,                       // bidir[15:13]: jtag_tdi_i, jtag_trst_ni, uart_rx_i -- input-only
         gpio_out_en_o[1], gpio_out_en_o[0],
         qspi_sd_en_o[3], qspi_sd_en_o[2], qspi_sd_en_o[1], qspi_sd_en_o[0],
@@ -138,6 +147,8 @@ module chip_core #(
     assign jtag_tdi_i   = bidir_in[13];
     assign jtag_trst_ni = bidir_in[14];
     assign uart_rx_i    = bidir_in[15];
+    assign scan_si_i    = bidir_in[16];
+    assign scan_se_i    = bidir_in[17];
 
     logic _unused_bidir_in;
     assign _unused_bidir_in = &{bidir_in[6:0], bidir_in[NUM_BIDIR_PADS-1:NUM_BIDIR_USED]};
@@ -155,7 +166,9 @@ module chip_core #(
     // Pull down spare (unused) bidir pads only, to avoid a floating node
     // while they sit in input mode; pads actually driven by croc_soc don't
     // need one.
-    assign bidir_pd[NUM_BIDIR_USED-1:0] = '0;
+    // scan_si_i/scan_se_i (bidir[17:16]) also get a pull-down: an open scan_se_i pad then
+    // reads 0 and the chip stays in functional mode.
+    assign bidir_pd[NUM_BIDIR_USED-1:0] = {1'b0, 2'b11, 16'b0};
     assign bidir_pd[NUM_BIDIR_PADS-1:NUM_BIDIR_USED] = '1;
 
     // Analog pads: unused by croc_soc, left floating/unconnected as the
