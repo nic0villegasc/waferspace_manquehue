@@ -7,3 +7,6 @@ final/
 img/
 *.lyrdb
 generated_defines.svh
+
+# link to the croc_soc run used as the hard macro (librelane/macros/macros_5v.yaml)
+/croc_macro

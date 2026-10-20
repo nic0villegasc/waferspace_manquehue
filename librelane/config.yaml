@@ -60,6 +60,13 @@ GND_NETS:
 # due to the unused Y output for output only pads
 IGNORE_DISCONNECTED_MODULES:
 - gf180mcu_fd_io__bi_24t
+# the other pad types of the AC3E padframe: the DC-DC pads are tied off, without a core behind them
+- gf180mcu_fd_io__in_c
+- gf180mcu_fd_io__in_s
+- gf180mcu_fd_io__asig_5p0
+- gf180mcu_fd_io__dvdd
+- gf180mcu_fd_io__dvss
+- gf180mcu_fd_io__brk5
 - gf180mcu_ws_ip__qrcode_id
 - gf180mcu_ws_ip__shuttle_id
 - gf180mcu_ws_ip__project_id
@@ -67,8 +74,8 @@ IGNORE_DISCONNECTED_MODULES:
 - gf180mcu_ws_ip__marker
 
 # Clock
-CLOCK_PORT: clk_PAD
-CLOCK_NET: clk_pad/Y
+CLOCK_PORT: clk_i
+CLOCK_NET: pad_clk_i/Y
 CLOCK_PERIOD: 55 # 18.18 MHz, matches the croc_soc signoff period
 
 # Overfix hold violations
@@ -83,8 +90,17 @@ GRT_ALLOW_CONGESTION: true
 # repair_design puts buffers along the long pad-to-macro nets, some inside the macro footprint where
 # there are no rows. The nearest row can be ~500 um away, beyond the old 500/200 limit, and
 # detailed placement failed on those buffers.
-PL_MAX_DISPLACEMENT_X: 1000
-PL_MAX_DISPLACEMENT_Y: 1000
+# AC3E padframe: the 1100 um macro leaves only 14 um of core on its left and right, so the tie cells of the pads
+# beside it (one per constant pad input) find no row nearby. 2500 um lets them reach the rows above or below the
+# macro; they drive constants, so the long wires do not matter.
+PL_MAX_DISPLACEMENT_X: 2500
+PL_MAX_DISPLACEMENT_Y: 2500
+
+# AC3E padframe: a diode at the sink of every net longer than 200 um. The tie cells of the pads beside the macro
+# sit far from their pads (PL_MAX_DISPLACEMENT above), and their long nets failed the KLayout antenna rule ANT.16
+# although the OpenROAD antenna check passed them.
+RUN_HEURISTIC_DIODE_INSERTION: true
+HEURISTIC_ANTENNA_THRESHOLD: 200
 
 # Fix antenna violations after DRT
 DRT_ANTENNA_REPAIR_ITERS: 10
@@ -116,8 +132,15 @@ PDN_VERTICAL_HALO: 5
 
 PDN_CORE_RING: True
 # Maximum metal width without slotting: 30um
-PDN_CORE_RING_VWIDTH: 25
-PDN_CORE_RING_HWIDTH: 25
+# AC3E padframe: the ring sits in the 28 um between the pads (376 um from the die edge) and the core (404 um),
+# so it is two 10 um rings 2 um apart, 2 um outside the core. croc_soc draws about 10 mA, far below what 10 um
+# of Metal3/Metal4 carries.
+PDN_CORE_RING_VWIDTH: 10
+PDN_CORE_RING_HWIDTH: 10
+PDN_CORE_RING_VSPACING: 2
+PDN_CORE_RING_HSPACING: 2
+PDN_CORE_RING_VOFFSET: 2
+PDN_CORE_RING_HOFFSET: 2
 PDN_CORE_RING_CONNECT_TO_PADS: True
 PDN_CORE_VERTICAL_LAYER: Metal4
 PDN_CORE_HORIZONTAL_LAYER: Metal3

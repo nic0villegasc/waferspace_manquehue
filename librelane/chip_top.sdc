@@ -41,23 +41,13 @@ if { [info exists ::env(MAX_CAPACITANCE_CONSTRAINT)] } {
 
 set clocks [get_clocks $clock_port]
 
-# Bidirectional pads
-set clk_core_inout_ports [get_ports { 
-    bidir_PAD[*]
-}] 
+# Every pad port of the AC3E padframe is inout, so all of them get the I/O delays: as inputs and, for the pads that
+# drive, as outputs. The clock is created on the pad output (CLOCK_NET), so the delay on the clk_i port times nothing.
+set clk_core_inout_ports [all_inputs]
 
 set_input_delay -min 0 -clock $clocks $clk_core_inout_ports
 set_input_delay -max $input_delay_value -clock $clocks $clk_core_inout_ports
 set_output_delay $output_delay_value -clock $clocks $clk_core_inout_ports
-
-# Input-only pads
-set clk_core_input_ports [get_ports { 
-    rst_n_PAD
-    input_PAD[*]
-}] 
-
-set_input_delay -min 0 -clock $clocks $clk_core_input_ports
-set_input_delay -max $input_delay_value -clock $clocks $clk_core_input_ports
 
 # Output load
 set cap_load [expr $::env(OUTPUT_CAP_LOAD) / 1000.0]
