@@ -38,6 +38,17 @@ for inst in top.each_inst():
         pads.insert(inst.bbox())
 pads.merge()
 m2 = chip.layer(36, 0)
+# Metal2 routes added to a layout (chip coordinates, after the shift): (layout, x0, y0, x1, y1).
+# DB_VCO_wrapper leaves V_FB and V_REF (VCONT of the two VCOs) open at the east pads 93 and 92 (asig_5p0):
+# V_FB stops 31 um before its pad at y 4260.7, V_REF ends at x 1518.6, y 4484. 5 um wide like its own wires,
+# 0.5 um into the pad.
+ROUTES = [("DB_VCO_wrapper", 1523.59, 4255.66, 1560.5, 4265.66),     # V_FB: across to pad 93
+          ("DB_VCO_wrapper", 1513.59, 4152.0, 1518.59, 4489.38),     # V_REF: down from its end
+          ("DB_VCO_wrapper", 1513.59, 4152.0, 1560.5, 4162.0)]       # V_REF: across to pad 92
+# V_FB reaches the top of its own Metal2 wire (x 1523.59-1528.59, y 4260.7-4589.4) on Metal3, ending at x 1523.585
+# with no via. Its Metal3 end goes over the wire top and a via2 array (0.26 um, pitch 0.52) joins them.
+ROUTES_M3 = [("DB_VCO_wrapper", 1518.0, 4584.39, 1528.59, 4589.39)]
+VIA2 = [("DB_VCO_wrapper", 1523.85, 4584.65, 1528.33, 4589.13)]
 for w in WRAPPERS:
     ly = pya.Layout()
     ly.read("%s/%s.gds" % (gds_dir, w))
@@ -61,6 +72,25 @@ for w in WRAPPERS:
     tgt.shapes(m2).clear()
     tgt.shapes(m2).insert(after)
     dx, dy = SHIFT.get(w, (0.0, 0.0))
+    for (rw, x0, y0, x1, y1) in ROUTES:
+        if rw == w:
+            tgt.shapes(m2).insert(pya.DBox(x0 - dx, y0 - dy, x1 - dx, y1 - dy))
+            print("INFO: %s Metal2 route (%.2f,%.2f)-(%.2f,%.2f)" % (w, x0, y0, x1, y1))
+    for (rw, x0, y0, x1, y1) in ROUTES_M3:
+        if rw == w:
+            tgt.shapes(chip.layer(42, 0)).insert(pya.DBox(x0 - dx, y0 - dy, x1 - dx, y1 - dy))
+    for (rw, x0, y0, x1, y1) in VIA2:
+        if rw != w:
+            continue
+        n = 0
+        y = y0
+        while y + 0.26 <= y1 + 1e-6:
+            x = x0
+            while x + 0.26 <= x1 + 1e-6:
+                tgt.shapes(chip.layer(38, 0)).insert(pya.DBox(x - dx, y - dy, x + 0.26 - dx, y + 0.26 - dy))
+                x += 0.52; n += 1
+            y += 0.52
+        print("INFO: %s via2 array of %d at (%.2f,%.2f)" % (w, n, x0, y0))
     top.insert(pya.DCellInstArray(tgt.cell_index(), pya.DTrans(pya.DVector(dx, dy))))
     print("INFO: %s Metal2 cut at %d pad cells: %.2f um2 removed" % (w, pads.count(), (before.area() - after.area()) * 1e-6))
     print("INFO: %s at %s, %d zero-area shapes dropped" % (w, tgt.dbbox(), zero))
