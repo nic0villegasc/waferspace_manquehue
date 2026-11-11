@@ -28,7 +28,10 @@ dcdc:
     DB_VCO_wrapper.gds: 290e80c17000bae8fc3866349dfd26bc7095032853a2224d6c3160178be41155
 
 pad_nc:
-  path: ~/ic-designs/waferspace_manquehue/macros/pad_nc
+  release:
+    repo: nic0villegasc/waferspace_manquehue
+    tag: pad-nc-v1
+    asset: pad_nc-pad-nc-v1.tar.gz
   files:
     gf180mcu_fd_io__dvdd_no_clamp.gds: 6009f74300cc23d279b5efa0265b3eed5824108db5924295b31f27a629b022d8
     gf180mcu_fd_io__dvdd_no_clamp.lef: a0a1425751f08ce19187ca0e7f5b1f91aa7851ed1e7b812f6621760428ec29db
