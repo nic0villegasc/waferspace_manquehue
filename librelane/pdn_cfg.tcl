@@ -31,6 +31,15 @@ global_connect
 
 set_voltage_domain -name CORE -power $::env(VDD_NET) -ground $::env(GND_NET)
 
+# The DC-DC half (above the core ring, up to the north pads) belongs to the DC-DC layouts merged after this flow.
+# A Metal2 obstruction there keeps the core ring's pad connections (connect_to_pads) from running a strap up to
+# the DC-DC supply pads (it did to pad 103, db_dvss), and keeps routing out of that area.
+set die [$block getDieArea]
+set core [$block getCoreArea]
+set pad_depth [expr {int(376.0 * $dbu)}]
+odb::dbObstruction_create $block [$tech findLayer Metal2] [expr {[$die xMin] + $pad_depth}] \
+    [expr {[$core yMax] + int(16.0 * $dbu)}] [expr {[$die xMax] - $pad_depth}] [expr {[$die yMax] - $pad_depth}]
+
 # 1. Core grid: vertical stripes out to the core ring, the rails, and the ring itself.
 define_pdn_grid -name stdcell_grid -starts_with POWER -voltage_domain CORE
 add_pdn_stripe -grid stdcell_grid -layer $::env(PDN_VERTICAL_LAYER) -width $::env(PDN_VWIDTH) -pitch $::env(PDN_VPITCH) \
