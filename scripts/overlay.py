@@ -1,6 +1,6 @@
 # CROC macro plus the DC-DC layouts of a folder in one GDS, to look at how they meet before a chip run.
 # usage: klayout -b -r scripts/overlay.py -rd croc=<croc_soc.gds> -rd dcdc=<folder> -rd out=<gds>
-# CROC goes at (392, 404) (librelane/macros/macros.yaml). Layer 255/0: CROC outline. Layer 255/1: where a DC-DC
+# CROC goes at (392, 404) (librelane/macros.yaml). Layer 255/0: CROC outline. Layer 255/1: where a DC-DC
 # layout reaches inside it.
 import glob, os, pya
 ly = pya.Layout(); ly.dbu = 0.001

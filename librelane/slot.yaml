@@ -1,5 +1,5 @@
 # Slot for the AC3E pad ring of the croc chip: 108 pads, 12 breakers, DC-DC in the north, croc_soc on the CROC
-# segment (pads 27 to 72). The pad lists below and librelane/padframe/pad_cfg.tcl come from scripts/gen_chip_ring.py.
+# segment (pads 27 to 72). The pad lists below and librelane/pad_cfg.tcl come from scripts/gen_chip_ring.py.
 
 # Floorplanning
 FP_SIZING: absolute
@@ -11,7 +11,7 @@ CORE_AREA: [392, 404, 1544, 2206]
 VERILOG_DEFINES: ["SLOT_AC3E"]
 
 # Pad placement at the positions of padframe.yaml (instead of LibreLane's even spread)
-PAD_CFG: dir::padframe/pad_cfg.tcl
+PAD_CFG: dir::pad_cfg.tcl
 
 PAD_SOUTH: [
     pad_spi_sd_o,

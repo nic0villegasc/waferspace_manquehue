@@ -10,8 +10,8 @@ Writes:
                                   its ring segment (seg lines of padring.txt; VDD in the CROC segment), DVSS and VSS on
                                   VSS. The core-side inputs of the DC-DC pads stay open (the wrappers drive them). The
                                   DC-DC wrappers come into the GDS afterwards (merge_dcdc.py).
-  librelane/padframe/pad_cfg.tcl  every pad and breaker at its table position (PAD_CFG of the slot)
-  librelane/slots/slot_ac3e.yaml  the PAD_SOUTH/EAST/NORTH/WEST lists (the rest of the slot is kept)
+  librelane/pad_cfg.tcl  every pad and breaker at its table position (PAD_CFG of the slot)
+  librelane/slot.yaml  the PAD_SOUTH/EAST/NORTH/WEST lists (the rest of the slot is kept)
 """
 import re
 import sys
@@ -20,8 +20,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "manquehue_chip/scripts/chip/padring.txt"
 TOP = ROOT / "src" / "chip_top.sv"
-PADCFG = ROOT / "librelane" / "padframe" / "pad_cfg.tcl"
-SLOT = ROOT / "librelane" / "slots" / "slot_ac3e.yaml"
+PADCFG = ROOT / "librelane" / "pad_cfg.tcl"
+SLOT = ROOT / "librelane" / "slot.yaml"
 
 # pad signal -> (kind, chip_core nets, pull), as scripts/gen_chip_top.py. kind: in (in_c/in_s), bin (bi_24t input),
 # bout (bi_24t output), bio (bi_24t bidirectional: out, oe, in, ie)
@@ -155,7 +155,7 @@ for brk, n in brks:
 # The DC-DC wrappers are not in the netlist: they are wider than the core area OpenROAD allows (IFP-0002, the
 # 8_segs wrapper reaches 3 um into the east pads). scripts/merge_dcdc.py puts their layouts into the final GDS.
 
-# wafer.space IPs (positions in librelane/macros/macros_5v.yaml)
+# wafer.space IPs (positions in librelane/macros.yaml)
 body.append("    // wafer.space IPs\n" + "".join("    (* keep *) gf180mcu_ws_ip__%s %s ();\n" % (r, i) for r, i in (
     ("qrcode_id", "qrcode_id"), ("shuttle_id", "shuttle_id"), ("project_id", "project_id"), ("marker", "marker"),
     ("logo", "wafer_space_logo"))))

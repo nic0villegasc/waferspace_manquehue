@@ -121,7 +121,7 @@ DRT_ANTENNA_REPAIR_ITERS: 10
 DRT_ANTENNA_REPAIR_MARGIN: 10 # %
 
 # PDN
-PDN_CFG: dir::pdn/pdn_cfg.tcl
+PDN_CFG: dir::pdn_cfg.tcl
 PDN_ENABLE_PINS: False
 
 # PDN - Straps
