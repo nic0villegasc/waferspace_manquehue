@@ -6,6 +6,7 @@
 #   make publish NAME= DIR= TAG=   a new version of a macro, as a release of this repository (LOCAL=1: no upload)
 #   make stage-croc RUN=<run>   the files of a croc_soc run that the chip uses, into out/croc
 #   make ring                   src/chip_top.sv, librelane/pad_cfg.tcl and slot.yaml from padring.txt
+#   make ringcheck              quick check of the pad ring (a few minutes): placed as padring.txt says
 #   make chip                   LibreLane: pad ring, croc_soc, wires (30 to 60 min)
 #   make merge                  DC-DC layouts (DCDC) into the chip GDS: chip_top_dcdc.gds
 #   make gls                    chip GLS: JTAG boot, flash + ADC read, flash + radio (gls-jtag, gls-adc, gls-radio)
@@ -45,7 +46,7 @@ LL_CONFIGS := librelane/slot.yaml librelane/macros.yaml librelane/config.yaml
 LL_OPTS    := --pdk $(PDK) --pdk-root $(PDK_ROOT) --manual-pdk --scl gf180mcu_fd_sc_mcu7t5v0 --pad gf180mcu_fd_io
 CHIP_GLS   := TB=tb_chip_ac3e bash $(CROC)/scripts/sim/run_chip_gls.sh $(CR)/final/pnl/chip_top.pnl.v $(MACRO)/croc_soc.v
 
-.PHONY: help all pdk doctor fetch publish stage-croc ring chip merge gls gls-jtag gls-adc gls-radio precheck image overlay labels view klayout openroad summary
+.PHONY: help all pdk doctor fetch publish stage-croc ring ringcheck chip merge gls gls-jtag gls-adc gls-radio precheck image overlay labels view klayout openroad summary
 .DEFAULT_GOAL := help
 help:
 	@grep "^#   make" $(T)/Makefile | sed "s/^#   /  /"
@@ -86,6 +87,14 @@ ring:
 	@awk '$$1=="pad" && $$2>=27 && $$2<=72' $(T)/padring.txt > $(O)/croc_pads.here
 	@awk '$$1=="pad" && $$2>=27 && $$2<=72' $(CROC)/scripts/chip/padring.txt > $(O)/croc_pads.croc 2>/dev/null || true
 	@cmp -s $(O)/croc_pads.here $(O)/croc_pads.croc || echo "WARNING: CROC pads differ from $(CROC)/scripts/chip/padring.txt: build the macro again"
+
+# LibreLane up to the pad ring and croc_soc placement only, in out/ringcheck (not a chip run), then every pad and
+# breaker checked against padring.txt. Run make ring first when padring.txt changed.
+ringcheck: pdk fetch
+	@mkdir -p $(O)
+	$(NIX) "librelane $(LL_CONFIGS) $(LL_OPTS) --run-tag $(O)/ringcheck --overwrite --to Odb.ManualMacroPlacement" \
+	  > $(O)/ringcheck.log 2>&1 || { tail -20 $(O)/ringcheck.log; exit 1; }
+	python3 $(T)/scripts/ringcheck.py $(T)/padring.txt $(O)/ringcheck/18-odb-manualmacroplacement/chip_top.def
 
 chip: pdk fetch
 	@mkdir -p $(O)

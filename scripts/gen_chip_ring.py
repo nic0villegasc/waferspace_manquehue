@@ -10,7 +10,7 @@ Writes three files. Do not edit them by hand:
 
 padring.txt lines:
   pad <n> <signal> <cell>     <cell> is a gf180mcu_fd_io cell without its prefix (bi_24t, in_s, dvdd, asig_5p0...),
-                              or a full cell name with "__" for an own pad cell (see macros.yaml for its views)
+                              or the name of an own pad cell (its views in macros.yaml and sources.yaml)
   brk <name> <after pad>      a brk5 ring breaker in the gap after that pad
   seg <net> <pads> ...        supply segment: DVDD and VDD of these pads on <net>. VDD is the CROC segment.
 """
@@ -64,9 +64,14 @@ PINS = {
 SUPPLY = {"dvdd", "dvss"}       # supply pads: no signal pin
 
 
+# gf180mcu_fd_io cells by their short name. Any other name in padring.txt is an own pad cell, used as it is.
+PDK_PADS = {"bi_24t", "bi_t", "in_c", "in_s", "asig_5p0", "dvdd", "dvss", "brk2", "brk5", "cor",
+            "fill1", "fill5", "fill10", "fillnc"}
+
+
 def master(cell):
-    """Cell name in the layout: a PDK pad by its short name, or an own pad cell by its full name."""
-    return cell if "__" in cell else "gf180mcu_fd_io__" + cell
+    """Cell name in the layout: gf180mcu_fd_io__<cell> for a PDK pad, the name itself for an own pad cell."""
+    return "gf180mcu_fd_io__" + cell if cell in PDK_PADS else cell
 
 
 # 1. Read the table

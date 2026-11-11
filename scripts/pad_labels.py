@@ -49,8 +49,9 @@ def text(s, kind, side, along):
     top.shapes(text_layer[kind]).insert(r)
 
 
-for m in re.finditer(r"place_pad -row IO_(\w+) -location ([\d.]+) (\S+) -master \S+?__(\w+)", open(cfg).read()):
-    side, loc, inst, master = m.group(1), float(m.group(2)), m.group(3), m.group(4)
+for m in re.finditer(r"place_pad -row IO_(\w+) -location ([\d.]+) (\S+) -master (\S+)", open(cfg).read()):
+    side, loc, inst = m.group(1), float(m.group(2)), m.group(3)
+    master = m.group(4).replace("gf180mcu_fd_io__", "")
     w = 5.0 if master == "brk5" else PAD_W
     x0, y0, x1, y1 = {"WEST": (EDGE, loc, EDGE + PAD_D, loc + w), "EAST": (DIE_W - EDGE - PAD_D, loc, DIE_W - EDGE, loc + w),
                       "SOUTH": (loc, EDGE, loc + w, EDGE + PAD_D), "NORTH": (loc, DIE_H - EDGE - PAD_D, loc + w, DIE_H - EDGE)}[side]
