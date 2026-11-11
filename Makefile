@@ -8,6 +8,7 @@
 #   make gls                    chip GLS: JTAG boot, flash + ADC read, flash + radio (gls-jtag, gls-adc, gls-radio)
 #   make precheck               wafer.space precheck of the merged GDS
 #   make image                  PNG of the chip GDS (out/chip_top.png)
+#   make overlay                CROC macro + DC-DC layouts only, to check how they meet (out/overlay.gds)
 #   make klayout | openroad     open the last chip run
 #   make summary                results of the last chip run
 #   make all RUN=<croc run>     macro, chip, merge, gls, precheck, summary
@@ -36,10 +37,10 @@ LL_CONFIGS := librelane/slots/slot_ac3e.yaml librelane/macros/macros.yaml librel
 LL_OPTS    := --pdk $(PDK) --pdk-root $(PDK_ROOT) --manual-pdk --scl gf180mcu_fd_sc_mcu7t5v0 --pad gf180mcu_fd_io
 CHIP_GLS   := TB=tb_chip_ac3e bash $(CROC)/scripts/sim/run_chip_gls.sh $(CR)/final/pnl/chip_top.pnl.v $(MACRO)/croc_soc.v
 
-.PHONY: help all pdk macro ring chip merge gls gls-jtag gls-adc gls-radio precheck image klayout openroad summary
+.PHONY: help all pdk macro ring chip merge gls gls-jtag gls-adc gls-radio precheck image overlay klayout openroad summary
 .DEFAULT_GOAL := help
 help:
-	@sed -n "4,14p" $(T)/Makefile | sed "s/^# //"
+	@sed -n "3,13p" $(T)/Makefile | sed "s/^# //"
 
 all: macro chip merge gls precheck summary
 
@@ -89,6 +90,11 @@ image:
 	@mkdir -p $(O)
 	$(NIX) "klayout -zz -r $(T)/scripts/render_gds.py -rd gds=$(CHIP_GDS) \
 	  -rd lyp=$(T)/librelane/gf180mcu_render.lyp -rd out=$(O)/chip_top.png -rd width=4000"
+
+overlay:
+	@mkdir -p $(O)
+	$(NIX) "klayout -b -r $(T)/scripts/overlay.py -rd croc=$(T)/macros/croc/croc_soc.gds -rd dcdc=$(DCDC) \
+	  -rd out=$(O)/overlay.gds"
 
 klayout:
 	$(NIX) "librelane $(LL_CONFIGS) $(LL_OPTS) --last-run --flow OpenInKLayout"
