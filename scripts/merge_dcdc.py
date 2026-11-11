@@ -1,5 +1,5 @@
 # Put the DC-DC wrapper layouts into the chip GDS, where they were drawn (they are in chip coordinates).
-# usage: klayout -b -r scripts/merge_dcdc.py -rd input=<chip_top.gds> -rd output=<gds> [-rd gds_dir=dcdc_macro]
+# usage: klayout -b -r scripts/merge_dcdc.py -rd input=<chip_top.gds> -rd output=<gds> [-rd gds_dir=macros/dcdc_v0]
 # Every <name>.gds in gds_dir goes in, and its top cell must be named <name>. Each layout is placed at (0, 0), so it
 # must be drawn in chip coordinates.
 # The wrappers are not in the LibreLane netlist (gen_chip_ring.py): OpenROAD wants every macro to fit the core area,
@@ -11,7 +11,7 @@ import pya
 
 inp = globals()["input"]
 out = globals()["output"]
-gds_dir = globals().get("gds_dir", "dcdc_macro")
+gds_dir = globals().get("gds_dir", "macros/dcdc_v0")
 WRAPPERS = sorted(os.path.splitext(os.path.basename(f))[0] for f in glob.glob("%s/*.gds" % gds_dir))
 if not WRAPPERS:
     raise SystemExit("ERROR: no GDS in %s" % gds_dir)

@@ -1,135 +1,104 @@
-MAKEFILE_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+# AC3E chip: the AC3E pad ring, the croc_soc macro and the DC-DC layouts in one chip_top.gds.
+# Run every target from this folder in a normal shell. Each one enters the nix-shell of this repository.
+#
+#   make macro RUN=<croc run>   timing models of a manquehue_chip run, then point macros/croc at it
+#   make ring                   src/chip_top.sv, pad_cfg.tcl and the pad lists from padring.txt
+#   make chip                   LibreLane: pad ring, croc_soc, wires (30 to 60 min)
+#   make merge                  DC-DC layouts (DCDC) into the chip GDS: chip_top_dcdc.gds
+#   make gls                    chip GLS: JTAG boot, flash + ADC read, flash + radio (gls-jtag, gls-adc, gls-radio)
+#   make precheck               wafer.space precheck of the merged GDS
+#   make image                  PNG of the chip GDS (out/chip_top.png)
+#   make klayout | openroad     open the last chip run
+#   make summary                results of the last chip run
+#   make all RUN=<croc run>     macro, chip, merge, gls, precheck, summary
+#
+# Variables: CROC (manquehue_chip checkout), RUN (croc run under $(CROC)/outputs), CHIP_RUN (run under
+# librelane/runs, default the newest), DCDC (folder of DC-DC layouts, default macros/dcdc_v0). Logs go to out/.
 
-RUN_TAG = $(shell ls librelane/runs/ | tail -n 1)
-TOP = chip_top
+T          := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+CROC       ?= $(HOME)/Documents/manquehue_chip
+RUN        ?= $(notdir $(realpath $(T)/macros/croc))
+MACRO      := $(CROC)/outputs/$(RUN)
+CHIP_RUN   ?= $(shell ls -t $(T)/librelane/runs 2>/dev/null | head -1)
+CR         := $(T)/librelane/runs/$(CHIP_RUN)
+DCDC       ?= $(T)/macros/dcdc_v0
+CHIP_GDS    = $(if $(wildcard $(CR)/final/gds/chip_top_dcdc.gds),$(CR)/final/gds/chip_top_dcdc.gds,$(CR)/final/gds/chip_top.gds)
+O          := $(T)/out
+PRECHECK   ?= $(HOME)/Documents/gf180mcu-precheck
+PRECHECK_PYTHONPATH ?= /nix/store/mxgvi3js4wjqh7azybkj4zx3fixh2cvb-python3.13-qrcode-8.2/lib/python3.13/site-packages
+NIX        := cd $(T) && nix-shell --run
 
-PDK_ROOT ?= $(MAKEFILE_DIR)/gf180mcu
-PDK ?= gf180mcuD
+# PDK and LibreLane
+PDK_ROOT   ?= $(T)/gf180mcu
+PDK        ?= gf180mcuD
 PDK_COMMIT ?= f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7
+LL_CONFIGS := librelane/slots/slot_ac3e.yaml librelane/macros/macros.yaml librelane/config.yaml
+LL_OPTS    := --pdk $(PDK) --pdk-root $(PDK_ROOT) --manual-pdk --scl gf180mcu_fd_sc_mcu7t5v0 --pad gf180mcu_fd_io
+CHIP_GLS   := TB=tb_chip_ac3e bash $(CROC)/scripts/sim/run_chip_gls.sh $(CR)/final/pnl/chip_top.pnl.v $(MACRO)/croc_soc.v
 
-# Available SCL libraries:
-# gf180mcu_as_sc_mcu7t3v3
-# gf180mcu_fd_sc_mcu7t5v0
-# gf180mcu_fd_sc_mcu9t5v0
-# gf180mcu_osu_sc_gp9t3v3 (broken)
-# gf180mcu_osu_sc_gp12t3v3 (broken)
-
-ifeq ($(SCL),default)
-    SCL = gf180mcu_fd_sc_mcu7t5v0
-endif
-SCL ?= gf180mcu_fd_sc_mcu7t5v0
-
-# Available PAD libraries:
-# gf180mcu_fd_io
-# gf180mcu_ocd_io
-
-ifeq ($(PAD),default)
-    PAD = gf180mcu_fd_io
-endif
-PAD ?= gf180mcu_fd_io
-
-# Available SRAM macros:
-# gf180mcu_fd_ip_sram
-# gf180mcu_ocd_ip_sram
-
-ifeq ($(SRAM),default)
-    SRAM = gf180mcu_fd_ip_sram
-endif
-SRAM ?= gf180mcu_fd_ip_sram
-
-ifeq ($(SRAM),gf180mcu_fd_ip_sram)
-    MACROS = 5v
-else
-    MACROS = 3v3
-endif
-
-AVAILABLE_SLOTS = 1x1 0p5x1 1x0p5 0p5x0p5 ac3e
-DEFAULT_SLOT = 1x1
-
-# Slot can be any of AVAILABLE_SLOTS
-SLOT ?= $(DEFAULT_SLOT)
-
-ifeq ($(SLOT),default)
-    SLOT = $(DEFAULT_SLOT)
-endif
-
-ifeq ($(filter $(SLOT),$(AVAILABLE_SLOTS)),)
-    $(error $(SLOT) does not exist in AVAILABLE_SLOTS: $(AVAILABLE_SLOTS))
-endif
-
-SLOT_DEFINE = SLOT_$(shell echo $(SLOT) | tr '[:lower:]' '[:upper:]')
-SRAM_DEFINE = SRAM_$(SRAM)
-
-LIBRELANE_OPTS = --pdk ${PDK} --pdk-root ${PDK_ROOT} --manual-pdk --scl ${SCL} --pad ${PAD}
-LIBRELANE_CONFIGS = librelane/slots/slot_${SLOT}.yaml librelane/macros/macros_${MACROS}.yaml librelane/config.yaml
-
+.PHONY: help all pdk macro ring chip merge gls gls-jtag gls-adc gls-radio precheck image klayout openroad summary
 .DEFAULT_GOAL := help
+help:
+	@sed -n "4,14p" $(T)/Makefile | sed "s/^# //"
 
-help: ## Show this help message
-	@echo 'Usage: make [target]'
-	@echo ''
-	@echo 'Available targets:'
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
-.PHONY: help
+all: macro chip merge gls precheck summary
 
-all: librelane ## Build the project (runs LibreLane)
-.PHONY: all
-
+pdk: $(PDK_ROOT)/ciel/gf180mcu/versions/$(PDK_COMMIT)/$(PDK)
 $(PDK_ROOT)/ciel/gf180mcu/versions/$(PDK_COMMIT)/$(PDK):
-	ciel enable $(PDK_COMMIT) --pdk-root $(PDK_ROOT) --pdk-family $(PDK) --include-libraries all
+	$(NIX) "ciel enable $(PDK_COMMIT) --pdk-root $(PDK_ROOT) --pdk-family $(PDK) --include-libraries all"
 
-clone-pdk: $(PDK_ROOT)/ciel/gf180mcu/versions/$(PDK_COMMIT)/$(PDK) ## Clone the gf180mcu PDK
-.PHONY: clone-pdk
+macro:
+	@test -d $(MACRO) || { echo "no run $(MACRO)"; exit 1; }
+	ls $(MACRO)/etm/croc_soc_slow.lib >/dev/null 2>&1 || bash $(CROC)/scripts/signoff/sta/extract_models.sh $(MACRO)
+	@mkdir -p $(T)/macros
+	ln -sfn $(MACRO) $(T)/macros/croc
+	@echo "macros/croc -> $$(readlink $(T)/macros/croc)"
 
-# Need to find a better way to
-# pass the variables to LibreLane
-defines:
-	@echo "Writing src/generated_defines.svh"
-	$(file >src/generated_defines.svh,// This file is auto-generated by the Makefile)
-	$(file >>src/generated_defines.svh,`define ${SLOT_DEFINE})
-	$(file >>src/generated_defines.svh,`define ${SRAM_DEFINE})
-.PHONY: defines
+ring:
+	python3 $(T)/scripts/gen_chip_ring.py $(CROC)/scripts/chip/padring.txt
 
-librelane: clone-pdk defines ## Run LibreLane flow (synthesis, PnR, verification)
-	SRAM_DEFINE=${SRAM_DEFINE} librelane ${LIBRELANE_CONFIGS} ${LIBRELANE_OPTS} --save-views-to $(MAKEFILE_DIR)/final
-.PHONY: librelane
+chip: pdk
+	@mkdir -p $(O)
+	$(NIX) "librelane $(LL_CONFIGS) $(LL_OPTS)" 2>&1 | tee $(O)/chip_run.log
 
-librelane-condensed: clone-pdk defines ## Run LibreLane flow (synthesis, PnR, verification)
-	SRAM_DEFINE=${SRAM_DEFINE} librelane --condensed ${LIBRELANE_CONFIGS} ${LIBRELANE_OPTS} --save-views-to $(MAKEFILE_DIR)/final
-.PHONY: librelane-condensed
+merge:
+	@mkdir -p $(O)
+	$(NIX) "klayout -b -r $(T)/scripts/merge_dcdc.py -rd input=$(CR)/final/gds/chip_top.gds \
+	  -rd output=$(CR)/final/gds/chip_top_dcdc.gds -rd gds_dir=$(DCDC)" 2>&1 | tee $(O)/merge.log
 
-librelane-nodrc: clone-pdk defines ## Run LibreLane flow without DRC checks
-	SRAM_DEFINE=${SRAM_DEFINE} librelane ${LIBRELANE_CONFIGS} ${LIBRELANE_OPTS} --save-views-to $(MAKEFILE_DIR)/final --skip KLayout.Antenna --skip KLayout.DRC --skip Magic.DRC
-.PHONY: librelane-nodrc
+gls: gls-jtag gls-adc gls-radio
+gls-jtag:
+	@mkdir -p $(O)
+	$(NIX) "$(CHIP_GLS) $(O)/gls_jtag" 2>&1 | tee $(O)/gls_jtag.log
+gls-adc:   GLS_SRC = ../spi/spi_adc.c
+gls-radio: GLS_SRC = spi_radio.c
+gls-adc gls-radio: gls-%:
+	@mkdir -p $(O)
+	$(NIX) "cd $(CROC)/sim/sw/flash && bash build.sh $(GLS_SRC) > /dev/null && \
+	  VVP_ARGS=+flash=$(CROC)/sim/sw/flash/bin/spi_$*.flash.hex $(CHIP_GLS) $(O)/gls_$*" 2>&1 | tee $(O)/gls_$*.log
 
-librelane-klayoutdrc: clone-pdk defines ## Run LibreLane flow without magic DRC checks
-	SRAM_DEFINE=${SRAM_DEFINE} librelane ${LIBRELANE_CONFIGS} ${LIBRELANE_OPTS} --save-views-to $(MAKEFILE_DIR)/final --skip Magic.DRC
-.PHONY: librelane-klayoutdrc
+precheck:
+	@mkdir -p $(O)/precheck
+	$(NIX) "export PDK_ROOT=$(HOME)/.ciel PDK=gf180mcuD PYTHONPATH=$(PRECHECK_PYTHONPATH); cd $(PRECHECK) && \
+	  python3 precheck.py --input $(CHIP_GDS) --slot 0p5x1 --workers 2 --threads 5 \
+	  --output $(O)/precheck/chip_top.oas" 2>&1 | tee $(O)/precheck/precheck.log || true
+	@grep -q "Precheck successfully completed" $(O)/precheck/precheck.log && echo "precheck: PASS" \
+	  || { echo "precheck: FAIL, see $(O)/precheck/precheck.log"; exit 1; }
 
-librelane-magicdrc: clone-pdk defines ## Run LibreLane flow without KLayout DRC checks
-	SRAM_DEFINE=${SRAM_DEFINE} librelane ${LIBRELANE_CONFIGS} ${LIBRELANE_OPTS} --save-views-to $(MAKEFILE_DIR)/final --skip KLayout.DRC
-.PHONY: librelane-magicdrc
+image:
+	@mkdir -p $(O)
+	$(NIX) "klayout -zz -r $(T)/scripts/render_gds.py -rd gds=$(CHIP_GDS) \
+	  -rd lyp=$(T)/librelane/gf180mcu_render.lyp -rd out=$(O)/chip_top.png -rd width=4000"
 
-librelane-openroad: clone-pdk defines ## Open the last run in OpenROAD
-	SRAM_DEFINE=${SRAM_DEFINE} librelane ${LIBRELANE_CONFIGS} ${LIBRELANE_OPTS} --last-run --flow OpenInOpenROAD
-.PHONY: librelane-openroad
+klayout:
+	$(NIX) "librelane $(LL_CONFIGS) $(LL_OPTS) --last-run --flow OpenInKLayout"
+openroad:
+	$(NIX) "librelane $(LL_CONFIGS) $(LL_OPTS) --last-run --flow OpenInOpenROAD"
 
-librelane-klayout: clone-pdk defines ## Open the last run in KLayout
-	SRAM_DEFINE=${SRAM_DEFINE} librelane ${LIBRELANE_CONFIGS} ${LIBRELANE_OPTS} --last-run --flow OpenInKLayout
-.PHONY: librelane-klayout
-
-librelane-padring: clone-pdk defines ## Only create the padring
-	python3 scripts/padring.py ${LIBRELANE_CONFIGS} ${LIBRELANE_OPTS}
-.PHONY: librelane-padring
-
-sim: clone-pdk defines ## Run RTL simulation with cocotb
-	cd cocotb; PDK_ROOT=${PDK_ROOT} PDK=${PDK} SLOT=${SLOT} PAD=${PAD} SCL=${SCL} SRAM=${SRAM} python3 chip_top_tb.py
-.PHONY: sim
-
-sim-gl: clone-pdk defines ## Run gate-level simulation with cocotb (after copy-final)
-	cd cocotb; GL=1 PDK_ROOT=${PDK_ROOT} PDK=${PDK} SLOT=${SLOT} PAD=${PAD} SCL=${SCL} SRAM=${SRAM} python3 chip_top_tb.py
-.PHONY: sim-gl
-
-sim-view: ## View simulation waveforms in GTKWave
-	gtkwave cocotb/sim_build/chip_top.fst
-.PHONY: sim-view
+summary:
+	@echo "chip run : $(CR)"
+	@echo "macro    : $$(readlink $(T)/macros/croc)"
+	@grep -a -E "Flow complete|LibreLane will now quit" $(CR)/flow.log 2>/dev/null | tail -1 || true
+	@cat $(CR)/*-misc-reportmanufacturability/manufacturability.rpt 2>/dev/null | grep -v "^$$" || true
+	@grep -h "\[TB\] PASS\|\[TB\] FAIL" $(O)/gls_*.log 2>/dev/null | sed "s/^/gls: /" || true
+	@grep -h "Precheck successfully completed" $(O)/precheck/precheck.log 2>/dev/null | head -1 | sed "s/^.*/precheck: PASS/" || true
