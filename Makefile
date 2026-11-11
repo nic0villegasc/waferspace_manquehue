@@ -11,6 +11,7 @@
 #   make precheck               wafer.space precheck of the merged GDS
 #   make image                  PNG of the chip GDS (out/chip_top.png)
 #   make overlay                CROC macro + DC-DC layouts only, to check how they meet (out/overlay.gds)
+#   make labels                 pad numbers and names as a GDS to open over the chip in KLayout (out/pad_labels.gds)
 #   make klayout | openroad     open the last chip run
 #   make summary                results of the last chip run
 #   make all                    chip, merge, gls, precheck, summary
@@ -38,7 +39,7 @@ LL_CONFIGS := librelane/slots/slot_ac3e.yaml librelane/macros/macros.yaml librel
 LL_OPTS    := --pdk $(PDK) --pdk-root $(PDK_ROOT) --manual-pdk --scl gf180mcu_fd_sc_mcu7t5v0 --pad gf180mcu_fd_io
 CHIP_GLS   := TB=tb_chip_ac3e bash $(CROC)/scripts/sim/run_chip_gls.sh $(CR)/final/pnl/chip_top.pnl.v $(MACRO)/croc_soc.v
 
-.PHONY: help all pdk fetch publish stage-croc ring chip merge gls gls-jtag gls-adc gls-radio precheck image overlay klayout openroad summary
+.PHONY: help all pdk fetch publish stage-croc ring chip merge gls gls-jtag gls-adc gls-radio precheck image overlay labels klayout openroad summary
 .DEFAULT_GOAL := help
 help:
 	@grep "^#   make" $(T)/Makefile | sed "s/^#   /  /"
@@ -114,6 +115,12 @@ overlay: fetch
 	@mkdir -p $(O)
 	$(NIX) "klayout -b -r $(T)/scripts/overlay.py -rd croc=$(T)/macros/croc/croc_soc.gds -rd dcdc=$(DCDC) \
 	  -rd out=$(O)/overlay.gds"
+
+# Open over a chip GDS in KLayout: File > Open, "Add to current panel".
+labels:
+	@mkdir -p $(O)
+	$(NIX) "klayout -b -r $(T)/scripts/pad_labels.py -rd ring=$(T)/padring.txt -rd cfg=$(T)/librelane/pad_cfg.tcl \
+	  -rd out=$(O)/pad_labels.gds"
 
 klayout:
 	$(NIX) "librelane $(LL_CONFIGS) $(LL_OPTS) --last-run --flow OpenInKLayout"
