@@ -36,7 +36,7 @@ files the chip uses into `out/croc`.
 | Entry | What | Owner |
 |---|---|---|
 | `croc` | croc_soc: GDS, LEF, netlist, port stub, timing models | N. Villegas |
-| `dcdc_vco`, `dcdc_channels` | DC-DC layouts, into `macros/dcdc/` | S. Sanchez |
+| `dcdc` | DC-DC layouts (`Channels_wrapper`, `DB_VCO_wrapper`), into `macros/dcdc/` | S. Sanchez |
 
 An own pad cell gets an entry too, and its full cell name goes in `padring.txt` (see `librelane/macros.yaml`).
 
