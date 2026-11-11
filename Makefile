@@ -11,7 +11,8 @@
 #   make precheck               wafer.space precheck of the merged GDS
 #   make image                  PNG of the chip GDS (out/chip_top.png)
 #   make overlay                CROC macro + DC-DC layouts only, to check how they meet (out/overlay.gds)
-#   make labels                 pad numbers and names as a GDS to open over the chip in KLayout (out/pad_labels.gds)
+#   make labels                 pad numbers and names as a GDS (out/pad_labels.gds) and colours (out/view.lyp)
+#   make view [CHIP=<gds>]      a chip GDS in KLayout with the pad labels over it
 #   make klayout | openroad     open the last chip run
 #   make summary                results of the last chip run
 #   make all                    chip, merge, gls, precheck, summary
@@ -39,7 +40,7 @@ LL_CONFIGS := librelane/slot.yaml librelane/macros.yaml librelane/config.yaml
 LL_OPTS    := --pdk $(PDK) --pdk-root $(PDK_ROOT) --manual-pdk --scl gf180mcu_fd_sc_mcu7t5v0 --pad gf180mcu_fd_io
 CHIP_GLS   := TB=tb_chip_ac3e bash $(CROC)/scripts/sim/run_chip_gls.sh $(CR)/final/pnl/chip_top.pnl.v $(MACRO)/croc_soc.v
 
-.PHONY: help all pdk fetch publish stage-croc ring chip merge gls gls-jtag gls-adc gls-radio precheck image overlay labels klayout openroad summary
+.PHONY: help all pdk fetch publish stage-croc ring chip merge gls gls-jtag gls-adc gls-radio precheck image overlay labels view klayout openroad summary
 .DEFAULT_GOAL := help
 help:
 	@grep "^#   make" $(T)/Makefile | sed "s/^#   /  /"
@@ -116,11 +117,16 @@ overlay: fetch
 	$(NIX) "klayout -b -r $(T)/scripts/overlay.py -rd croc=$(T)/macros/croc/croc_soc.gds -rd dcdc=$(DCDC) \
 	  -rd out=$(O)/overlay.gds"
 
-# Open over a chip GDS in KLayout: File > Open, "Add to current panel".
+# Pad labels as a GDS (out/pad_labels.gds) and the layer colours to see them over a chip (out/view.lyp).
 labels:
 	@mkdir -p $(O)
 	$(NIX) "klayout -b -r $(T)/scripts/pad_labels.py -rd ring=$(T)/padring.txt -rd cfg=$(T)/librelane/pad_cfg.tcl \
 	  -rd out=$(O)/pad_labels.gds"
+	python3 $(T)/scripts/labels_lyp.py $(T)/librelane/gf180mcu_render.lyp $(O)/view.lyp
+
+# A chip GDS with the pad labels over it, in KLayout: make view [CHIP=<gds>] (default: the last chip run)
+view: labels
+	$(NIX) "klayout -s $(or $(CHIP),$(CHIP_GDS)) $(O)/pad_labels.gds -l $(O)/view.lyp"
 
 klayout:
 	$(NIX) "librelane $(LL_CONFIGS) $(LL_OPTS) --last-run --flow OpenInKLayout"

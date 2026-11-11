@@ -1,8 +1,9 @@
-# Pad labels for KLayout: a GDS with every pad of padring.txt as a box and its number and signal as polygon text,
-# in chip coordinates (make labels). Open it with File > Open, "Add to current panel", over the chip GDS.
+# Pad labels for KLayout: a GDS with every pad of padring.txt as an outline and its number and signal as polygon
+# text outside the die, next to the pad, in chip coordinates (make labels). make view opens it over a chip GDS
+# with colours (out/view.lyp); by hand: File > Open, "Add to current panel".
 # usage: klayout -b -r scripts/pad_labels.py -rd ring=padring.txt -rd cfg=librelane/pad_cfg.tcl -rd out=<gds>
-# Layers: 200/0 CROC signal, 200/1 CROC supply, 200/2 unused, 200/3 DC-DC signal, 200/4 DC-DC supply,
-#         200/5 breaker, 201/0 text.
+# Layers per kind (0 CROC signal, 1 CROC supply, 2 unused, 3 DC-DC signal, 4 DC-DC supply, 5 breaker):
+#         200/<kind> pad outline, 201/<kind> text.
 import re
 import pya
 
@@ -24,19 +25,28 @@ ly = pya.Layout()
 ly.dbu = 0.001
 top = ly.create_cell("pad_labels")
 box_layer = {k: ly.layer(200, v) for k, v in KIND.items()}
-text_layer = ly.layer(201, 0)
+text_layer = {k: ly.layer(201, v) for k, v in KIND.items()}
+GAP = 15.0                         # um between the die edge and the text
 gen = pya.TextGenerator.default_generator()
 unit = gen.text("X", ly.dbu, 1.0).bbox().height() * ly.dbu      # glyph height in um at magnification 1
 
 
-def text(s, cx, cy, vertical):
-    """Polygon text of height TEXT_H, centred on (cx, cy) um, reading bottom to top when vertical."""
+def text(s, kind, side, along):
+    """Polygon text of height TEXT_H outside the die, at the pad's position along its side."""
     r = gen.text(s, ly.dbu, TEXT_H / unit)
-    if vertical:
-        r.transform(pya.Trans(pya.Trans.R90))
-    b = r.bbox().center()
-    r.move(int(cx / ly.dbu) - b.x, int(cy / ly.dbu) - b.y)
-    top.shapes(text_layer).insert(r)
+    if side in ("NORTH", "SOUTH"):
+        r.transform(pya.Trans(pya.Trans.R90))          # reads bottom to top
+    b = r.bbox()
+    g, a = int(GAP / ly.dbu), int(along / ly.dbu)
+    if side == "WEST":
+        r.move(-g - b.right, a - b.center().y)
+    elif side == "EAST":
+        r.move(int(DIE_W / ly.dbu) + g - b.left, a - b.center().y)
+    elif side == "SOUTH":
+        r.move(a - b.center().x, -g - b.top)
+    else:
+        r.move(a - b.center().x, int(DIE_H / ly.dbu) + g - b.bottom)
+    top.shapes(text_layer[kind]).insert(r)
 
 
 for m in re.finditer(r"place_pad -row IO_(\w+) -location ([\d.]+) (\S+) -master \S+?__(\w+)", open(cfg).read()):
@@ -55,7 +65,7 @@ for m in re.finditer(r"place_pad -row IO_(\w+) -location ([\d.]+) (\S+) -master 
         kind = "dcdc_sup" if supply else "dcdc"
     top.shapes(box_layer[kind]).insert(pya.DBox(x0, y0, x1, y1))
     if kind != "brk":
-        text("%d %s" % (num, name), (x0 + x1) / 2, (y0 + y1) / 2, side in ("NORTH", "SOUTH"))
+        text("%d %s" % (num, name), kind, side, (y0 + y1) / 2 if side in ("WEST", "EAST") else (x0 + x1) / 2)
 
 ly.write(out)
 print("wrote %s" % out)
