@@ -11,6 +11,7 @@
 #   make merge                  DC-DC layouts (DCDC) into the chip GDS: chip_top_dcdc.gds
 #   make gls                    chip GLS: JTAG boot, flash + ADC read, flash + radio (gls-jtag, gls-adc, gls-radio)
 #   make precheck               wafer.space precheck of the merged GDS
+#   make lvs                    chip LVS without the DC-DC layouts: pads, ties, croc_soc flat (out/lvs/)
 #   make image                  PNG of the chip GDS (out/chip_top.png)
 #   make overlay                CROC macro + DC-DC layouts only, to check how they meet (out/overlay.gds)
 #   make labels                 pad numbers and names as a GDS (out/pad_labels.gds) and colours (out/view.lyp)
@@ -46,7 +47,7 @@ LL_CONFIGS := librelane/slot.yaml librelane/macros.yaml librelane/config.yaml
 LL_OPTS    := --pdk $(PDK) --pdk-root $(PDK_ROOT) --manual-pdk --scl gf180mcu_fd_sc_mcu7t5v0 --pad gf180mcu_fd_io
 CHIP_GLS   := TB=tb_chip_ac3e bash $(CROC)/scripts/sim/run_chip_gls.sh $(CR)/final/pnl/chip_top.pnl.v $(MACRO)/croc_soc.v
 
-.PHONY: help all pdk doctor fetch publish stage-croc ring ringcheck chip merge gls gls-jtag gls-adc gls-radio precheck image overlay labels view klayout openroad summary
+.PHONY: lvs help all pdk doctor fetch publish stage-croc ring ringcheck chip merge gls gls-jtag gls-adc gls-radio precheck image overlay labels view klayout openroad summary
 .DEFAULT_GOAL := help
 help:
 	@grep "^#   make" $(T)/Makefile | sed "s/^#   /  /"
@@ -131,6 +132,10 @@ precheck: $(PRECHECK)/precheck.py
 	  --output $(O)/precheck/chip_top.oas" 2>&1 | tee $(O)/precheck/precheck.log || true
 	@grep -q "Precheck successfully completed" $(O)/precheck/precheck.log && echo "precheck: PASS" \
 	  || { echo "precheck: FAIL, see $(O)/precheck/precheck.log"; exit 1; }
+
+# Chip LVS of the last chip run (KLayout, tools/lvs/): see scripts/lvs.sh. THR=<workers> (default every CPU).
+lvs: fetch
+	$(NIX) "bash $(T)/scripts/lvs.sh $(CR) $(O)/lvs" 2>&1 | tee $(O)/lvs.log
 
 image:
 	@mkdir -p $(O)
