@@ -75,6 +75,9 @@
 
                 # For logo generation
                 pillow
+
+                # For the wafer.space precheck (make precheck)
+                qrcode
               ];
           });
         }

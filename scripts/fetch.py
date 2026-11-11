@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Get the macros of sources.yaml into macros/<name>/ and check each file against its SHA-256 (make fetch).
 
-usage: python3 scripts/fetch.py [name ...]        (default: every macro in sources.yaml)
+usage: python3 scripts/fetch.py [--check] [name ...]   (default: every macro in sources.yaml)
+       --check only reports what is missing or changed (make doctor), and downloads nothing.
 
 A macro whose files all match is left alone, so make fetch is cheap to run before every target. A missing or
 changed file is fetched again from the macro's source, and checked again:
@@ -76,7 +77,10 @@ def get(name, spec, dest, files):
             shutil.copyfile(src / f, dest / f)
 
 
-names = sys.argv[1:] or list(SOURCES)
+args = sys.argv[1:]
+check = "--check" in args
+names = [a for a in args if a != "--check"] or list(SOURCES)
+bad_total = 0
 for name in names:
     spec = SOURCES[name]
     dest = ROOT / "macros" / spec.get("dest", name)   # several entries can fill one folder
@@ -87,8 +91,14 @@ for name in names:
     if not bad_files(dest, files):
         print("fetch: %-8s up to date (%d files)" % (name, len(files)))
         continue
+    if check:
+        bad_total += 1
+        print("fetch: %-8s MISSING or changed: %s" % (name, ", ".join(bad_files(dest, files))))
+        continue
     get(name, spec, dest, files)
     still = bad_files(dest, files)
     if still:
         raise SystemExit("fetch: %s: SHA-256 does not match after the download: %s" % (name, ", ".join(still)))
     print("fetch: %-8s fetched and checked (%d files)" % (name, len(files)))
+if check and bad_total:
+    sys.exit(1)

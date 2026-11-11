@@ -1,8 +1,9 @@
 # AC3E chip: the AC3E pad ring, the croc_soc macro and the DC-DC layouts in one chip_top.gds.
 # Run every target from this folder in a normal shell. Each one enters the nix-shell of this repository.
 #
+#   make doctor                 check this machine: tools, GitHub access, macros (start here)
 #   make fetch                  get the macros of sources.yaml into macros/, or check them (the targets run it)
-#   make publish NAME= DIR= [REPO= TAG=]   a new version of a macro: a release (with REPO, TAG) or a local folder
+#   make publish NAME= DIR= TAG=   a new version of a macro, as a release of this repository (LOCAL=1: no upload)
 #   make stage-croc RUN=<run>   the files of a croc_soc run that the chip uses, into out/croc
 #   make ring                   src/chip_top.sv, librelane/pad_cfg.tcl and slot.yaml from padring.txt
 #   make chip                   LibreLane: pad ring, croc_soc, wires (30 to 60 min)
@@ -17,8 +18,9 @@
 #   make summary                results of the last chip run
 #   make all                    chip, merge, gls, precheck, summary
 #
-# Variables: CROC (manquehue_chip checkout, for gls and the ring check), CHIP_RUN (run under librelane/runs,
-# default the newest), DCDC (folder of DC-DC layouts, default macros/dcdc). Logs go to out/.
+# Variables: CROC (manquehue_chip checkout, only for gls, stage-croc and the ring check), CHIP_RUN (run under
+# librelane/runs, default the newest), DCDC (folder of DC-DC layouts, default macros/dcdc). Logs go to out/.
+# The flow tools come from the AC3E IC Toolbox when it is there, otherwise from this repository's nix-shell.
 
 T          := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 CROC       ?= $(HOME)/Documents/manquehue_chip
@@ -28,9 +30,12 @@ CR         := $(T)/librelane/runs/$(CHIP_RUN)
 DCDC       ?= $(T)/macros/dcdc
 CHIP_GDS    = $(if $(wildcard $(CR)/final/gds/chip_top_dcdc.gds),$(CR)/final/gds/chip_top_dcdc.gds,$(CR)/final/gds/chip_top.gds)
 O          := $(T)/out
-PRECHECK   ?= $(HOME)/Documents/gf180mcu-precheck
-PRECHECK_PYTHONPATH ?= /nix/store/mxgvi3js4wjqh7azybkj4zx3fixh2cvb-python3.13-qrcode-8.2/lib/python3.13/site-packages
-NIX        := cd $(T) && nix-shell --run
+PRECHECK   ?= $(T)/.tools/gf180mcu-precheck
+PRECHECK_REV := 8d58ff7
+# GitHub repository for make publish: this repository's own origin
+REPO       ?= $(shell git -C $(T) remote get-url origin 2>/dev/null | sed -E 's|.*github.com[:/]||; s|[.]git$$||')
+TOOLBOX    := /opt/librelane-templates/activate/gf.sh
+NIX        := $(if $(wildcard $(TOOLBOX)),cd $(T) && bash -c '. $(TOOLBOX) >/dev/null 2>&1; eval "$$0"',cd $(T) && nix-shell --run)
 
 # PDK and LibreLane
 PDK_ROOT   ?= $(T)/gf180mcu
@@ -40,7 +45,7 @@ LL_CONFIGS := librelane/slot.yaml librelane/macros.yaml librelane/config.yaml
 LL_OPTS    := --pdk $(PDK) --pdk-root $(PDK_ROOT) --manual-pdk --scl gf180mcu_fd_sc_mcu7t5v0 --pad gf180mcu_fd_io
 CHIP_GLS   := TB=tb_chip_ac3e bash $(CROC)/scripts/sim/run_chip_gls.sh $(CR)/final/pnl/chip_top.pnl.v $(MACRO)/croc_soc.v
 
-.PHONY: help all pdk fetch publish stage-croc ring chip merge gls gls-jtag gls-adc gls-radio precheck image overlay labels view klayout openroad summary
+.PHONY: help all pdk doctor fetch publish stage-croc ring chip merge gls gls-jtag gls-adc gls-radio precheck image overlay labels view klayout openroad summary
 .DEFAULT_GOAL := help
 help:
 	@grep "^#   make" $(T)/Makefile | sed "s/^#   /  /"
@@ -51,14 +56,18 @@ pdk: $(PDK_ROOT)/ciel/gf180mcu/versions/$(PDK_COMMIT)/$(PDK)
 $(PDK_ROOT)/ciel/gf180mcu/versions/$(PDK_COMMIT)/$(PDK):
 	$(NIX) "ciel enable $(PDK_COMMIT) --pdk-root $(PDK_ROOT) --pdk-family $(PDK) --include-libraries all"
 
+doctor:
+	@bash $(T)/scripts/doctor.sh
+
 # Every target that reads a macro runs fetch first. With nothing changed it only checks the SHA-256.
 fetch:
 	python3 $(T)/scripts/fetch.py
 
-# A new version of a macro: make publish NAME=<entry> DIR=<folder> [REPO=<owner/repo> TAG=<tag>]. With REPO and
-# TAG it becomes a GitHub release that everyone fetches. Without them it is a local folder (your machine only).
+# A new version of a macro: make publish NAME=<entry> DIR=<folder> TAG=<tag>. It becomes a release of this
+# repository (REPO), and everyone gets it on the next make. LOCAL=1: point the entry at DIR, no upload.
 publish:
-	python3 $(T)/scripts/publish.py $(NAME) $(DIR) $(if $(REPO),--repo $(REPO) --tag $(TAG))
+	@test -n "$(NAME)" -a -n "$(DIR)" || { echo "give NAME=<entry> DIR=<folder> TAG=<tag>"; exit 1; }
+	python3 $(T)/scripts/publish.py $(NAME) $(DIR) $(if $(LOCAL),,--repo $(REPO) --tag $(TAG))
 	python3 $(T)/scripts/fetch.py $(NAME)
 
 # The files of a croc_soc run that the chip uses, in out/croc, ready for make publish NAME=croc DIR=out/croc.
@@ -87,8 +96,10 @@ merge: fetch
 	$(NIX) "klayout -b -r $(T)/scripts/merge_dcdc.py -rd input=$(CR)/final/gds/chip_top.gds \
 	  -rd output=$(CR)/final/gds/chip_top_dcdc.gds -rd gds_dir=$(DCDC)" 2>&1 | tee $(O)/merge.log
 
+# The chip GLS uses manquehue_chip's test bench: skipped without a checkout (CROC=<checkout>).
 gls: fetch
-	$(MAKE) gls-jtag gls-adc gls-radio
+	@if [ -d $(CROC)/scripts/sim ]; then $(MAKE) gls-jtag gls-adc gls-radio; \
+	 else echo "gls: skipped, no manquehue_chip checkout at $(CROC)"; fi
 gls-jtag:
 	@mkdir -p $(O)
 	$(NIX) "$(CHIP_GLS) $(O)/gls_jtag" 2>&1 | tee $(O)/gls_jtag.log
@@ -99,9 +110,14 @@ gls-adc gls-radio: gls-%:
 	$(NIX) "cd $(CROC)/sim/sw/flash && bash build.sh $(GLS_SRC) > /dev/null && \
 	  VVP_ARGS=+flash=$(CROC)/sim/sw/flash/bin/spi_$*.flash.hex $(CHIP_GLS) $(O)/gls_$*" 2>&1 | tee $(O)/gls_$*.log
 
-precheck:
+# The wafer.space precheck, cloned at PRECHECK_REV into .tools/ with the PDK revision it pins (its make clone-pdk).
+$(PRECHECK)/precheck.py:
+	git clone -q https://github.com/wafer-space/gf180mcu-precheck.git $(PRECHECK)
+	git -C $(PRECHECK) checkout -q $(PRECHECK_REV)
+
+precheck: $(PRECHECK)/precheck.py
 	@mkdir -p $(O)/precheck
-	$(NIX) "export PDK_ROOT=$(HOME)/.ciel PDK=gf180mcuD PYTHONPATH=$(PRECHECK_PYTHONPATH); cd $(PRECHECK) && \
+	$(NIX) "make -C $(PRECHECK) clone-pdk && cd $(PRECHECK) && PDK_ROOT=$(PRECHECK)/gf180mcu PDK=gf180mcuD \
 	  python3 precheck.py --input $(CHIP_GDS) --slot 0p5x1 --workers 2 --threads 5 \
 	  --output $(O)/precheck/chip_top.oas" 2>&1 | tee $(O)/precheck/precheck.log || true
 	@grep -q "Precheck successfully completed" $(O)/precheck/precheck.log && echo "precheck: PASS" \

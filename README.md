@@ -5,17 +5,18 @@ S. Sanchez. Built with LibreLane from the wafer.space GF180MCU project template 
 
 ## Start
 
-You need `git`, `python3`, `nix` and `gh` (logged in with `gh auth login`, with read access to the repositories
-in `sources.yaml`).
+You need `git`, `python3`, `gh` (logged in with `gh auth login --web`) and the flow tools: the AC3E IC Toolbox, or
+`nix`. `make doctor` checks all of it and says how to fix what is missing.
 
 ```
+make doctor     # check this machine first
 make fetch      # the macros of sources.yaml into macros/, checked by SHA-256
 make chip       # LibreLane: pad ring, croc_soc, wires
 make merge      # DC-DC layouts into the GDS
 make precheck   # wafer.space precheck
 ```
 
-`make help` lists every target. Each one enters the nix-shell itself and runs `make fetch` first, which only
+`make help` lists every target. Each one enters the flow environment itself and runs `make fetch` first, which only
 checks the hashes when nothing changed.
 
 ## A new version of a macro
@@ -23,13 +24,13 @@ checks the hashes when nothing changed.
 Put the files in one folder, then from this repository:
 
 ```
-make publish NAME=<entry> DIR=<folder> REPO=<your user>/<your repo> TAG=<tag>
+make publish NAME=<entry> DIR=<folder> TAG=<tag>
 git add sources.yaml && git commit -m "<entry> <tag>"
 ```
 
-This uploads the folder as a GitHub release of your repository and writes its hashes into `sources.yaml`.
-Everyone gets it on their next `make`. Without `REPO` and `TAG` the entry points at your local folder, to try a
-version before you publish it. For croc_soc, `make stage-croc RUN=<manquehue_chip run>` first collects the seven
+This uploads the folder as a GitHub release of this repository and writes its hashes into `sources.yaml`.
+Everyone gets it on their next `make`. With `LOCAL=1` instead of `TAG`, the entry points at your local folder, to
+try a version before you publish it. For croc_soc, `make stage-croc RUN=<manquehue_chip run>` first collects the seven
 files the chip uses into `out/croc`.
 
 | Entry | What | Owner |
