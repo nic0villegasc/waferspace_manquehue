@@ -2,7 +2,7 @@
 """Write the AC3E pad ring of the croc chip for LibreLane, from the pad table of the manquehue_chip FC flow.
 
 usage: scripts/gen_chip_ring.py [<padring.txt>]   (from the repository root)
-       default: ../manquehue_chip_wt/padring/scripts/chip/padring.txt
+       default: ../manquehue_chip/scripts/chip/padring.txt
 
 Writes:
   src/chip_top.sv                 every pad (pad_<signal>) and breaker, the wafer.space IPs, and chip_core (croc_soc)
@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "manquehue_chip_wt/padring/scripts/chip/padring.txt"
+SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "manquehue_chip/scripts/chip/padring.txt"
 TOP = ROOT / "src" / "chip_top.sv"
 PADCFG = ROOT / "librelane" / "padframe" / "pad_cfg.tcl"
 SLOT = ROOT / "librelane" / "slots" / "slot_ac3e.yaml"

@@ -1,20 +1,21 @@
 # librelane/padframe
 
-The AC3E padframe (TO-GF180MCU-AC3E-2026_V1, `04_chip_top/padframe/`), proposal `2026-10-19_croc_shared_spi`.
+The AC3E pad ring of the croc chip.
 
 | File | What it is |
 |---|---|
-| `padframe.yaml` | The proposal's pin list and pad ring. Copy, for reference. |
-| `pad_cfg.tcl` | Pad placement script (PAD_CFG of `slots/slot_ac3e.yaml`). Written by the AC3E generator `10_automation/scripts/generate_padframe.py` from `padframe.yaml`. Unchanged. |
-| `chip_top_padframe.sv` | Padframe-only top level from the same generator: one pad per pad number, ring breakers, ID macros, core-side inputs tied off. Unchanged. Input of `scripts/gen_chip_top.py`. |
+| `pad_cfg.tcl` | Pad placement for the OpenROAD.PadRing step (`PAD_CFG` of `slots/slot_ac3e.yaml`): every pad and ring breaker at its table position. Generated. |
 
-`scripts/gen_chip_top.py` writes `src/chip_top.sv` from `chip_top_padframe.sv`: it connects the CROC pads to
-`chip_core` and keeps the DC-DC pads tied off.
+The ring has one source: the pad table `scripts/chip/padring.txt` of manquehue_chip, the same table that the croc
+macro flow uses to place its pins in front of their pads. `scripts/gen_chip_ring.py` reads it and writes three files:
 
-To take a new padframe: run the AC3E generator on the new `padframe.yaml`, copy the three files here, then
-run `python3 scripts/gen_chip_top.py`.
+- `src/chip_top.sv`: every pad and breaker, the wafer.space IPs, and `chip_core` (croc_soc) on the CROC pads;
+- `librelane/padframe/pad_cfg.tcl`: the pad positions;
+- the `PAD_SOUTH`, `PAD_EAST`, `PAD_NORTH` and `PAD_WEST` lists of `librelane/slots/slot_ac3e.yaml`.
 
-Supply: the ring breakers after pads 22 and 75 cut DVDD, DVSS and VDD of the ring. In this chip run the core ring
-(`config.yaml`, `PDN_CORE_RING_CONNECT_TO_PADS`) connects to the pads of both halves, so the chip has one supply:
-the netlist has the single set VDD, VSS, DVDD, DVSS, the same as the AC3E padframe netlist. A separate DC-DC supply
-is for the AC3E integration.
+To change the ring: edit `padring.txt` in manquehue_chip, then from the root of this repository run
+`python3 scripts/gen_chip_ring.py` (or give the table path as its argument). Do not edit the three generated files
+by hand. A change to a CROC pad also moves a croc_soc pin, so the croc macro must be built again.
+
+Supplies: each ring segment between breakers has its own supply net (`seg` lines of `padring.txt`). The CROC
+segment (pads 27 to 72) is `VDD`, the core supply. `VSS` runs around the whole ring.

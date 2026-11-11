@@ -10,3 +10,9 @@ generated_defines.svh
 
 # link to the croc_soc run used as the hard macro (librelane/macros/macros_5v.yaml)
 /croc_macro
+
+# AC3E chip: run outputs, the PDK link and the DC-DC layouts (data, not source)
+/_ac3e/
+/gf180mcu
+/dcdc_macro/
+/dcdc_macro_v0_20261028/

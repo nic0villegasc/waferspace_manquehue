@@ -1,0 +1,15 @@
+# KLayout batch render of a GDS to PNG: klayout -zz -r scripts/render_gds.py -rd gds=<gds> -rd lyp=<lyp> -rd out=<png> -rd width=<px>
+import pya
+gds, lyp, out, width = gds, lyp, out, int(width)
+view = pya.LayoutView()
+view.set_config("background-color", "#000000")
+view.set_config("grid-visible", "false")
+view.set_config("text-visible", "false")
+cv = view.load_layout(gds, 0)
+view.max_hier()
+view.load_layer_props(lyp)
+view.zoom_fit()
+box = view.active_cellview().cell.dbbox()
+height = int(width * box.height() / box.width())
+view.save_image_with_options(out, width, height, 0, 0, 0, box, False)
+print("wrote", out, width, "x", height)
