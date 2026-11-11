@@ -56,7 +56,7 @@ if a.dest:
     entry["dest"] = a.dest
 
 if a.repo:
-    asset = "%s-%s.tar.gz" % (a.name, a.tag)
+    asset = (a.tag if a.tag.startswith(a.name) else "%s-%s" % (a.name, a.tag)) + ".tar.gz"   # croc-v2.tar.gz, not croc-croc-v2
     with tempfile.TemporaryDirectory() as tmp:
         arc = Path(tmp) / asset
         with tarfile.open(arc, "w:gz") as t:
