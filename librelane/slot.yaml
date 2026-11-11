@@ -3,8 +3,10 @@
 # Floorplanning
 FP_SIZING: absolute
 DIE_AREA: [0, 0, 1936, 5122]
-# Core: from the core ring to just above croc_soc (top at 2202.32). The DC-DC layouts sit above it.
-CORE_AREA: [392, 404, 1544, 2206]
+# Core: as low as the core ring allows (it ends 2 um above the pads) and to just above croc_soc (top at 2202.32),
+# so the tie-cell rows east of croc_soc are taller than croc_soc (global placement needs that). The DC-DC layouts
+# sit above.
+CORE_AREA: [392, 392, 1544, 2206]
 
 VERILOG_DEFINES: ["SLOT_AC3E"]
 
