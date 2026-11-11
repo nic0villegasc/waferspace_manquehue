@@ -103,7 +103,8 @@ croc_pads = {n for n, net in seg_of.items() if net == "VDD"}
 
 
 # 2. Position of a pad number: side and lower-left coordinate along it (y on west/east, x on south/north).
-#    43 pads per long side at 100 um, 11 per short side at 104 um, numbered counterclockwise from the top left.
+#    43 pads per long side at 100 um, numbered counterclockwise from the top left. South: 11 pads at 104 um.
+#    North: 11 pads at 100 um from x 430, the grid the pad wires of DB_VCO_wrapper are drawn for.
 def side_loc(n):
     if n <= 43:
         return "WEST", 4623.5 - 100.0 * (n - 1)
@@ -111,7 +112,7 @@ def side_loc(n):
         return "SOUTH", 410.5 + 104.0 * (n - 44)
     if n <= 97:
         return "EAST", 423.5 + 100.0 * (n - 55)
-    return "NORTH", 1450.5 - 104.0 * (n - 98)
+    return "NORTH", 1430.0 - 100.0 * (n - 98)
 
 
 def brk_loc(side, loc):

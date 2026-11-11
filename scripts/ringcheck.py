@@ -19,7 +19,7 @@ def side_loc(n):        # as scripts/gen_chip_ring.py
         return "SOUTH", 410.5 + 104.0 * (n - 44)
     if n <= 97:
         return "EAST", 423.5 + 100.0 * (n - 55)
-    return "NORTH", 1450.5 - 104.0 * (n - 98)
+    return "NORTH", 1430.0 - 100.0 * (n - 98)
 
 
 def centre(side, loc, w):

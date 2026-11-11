@@ -110,17 +110,17 @@ place_pad -row IO_EAST -location 4323.5 pad_vco_vss -master gf180mcu_fd_io__dvss
 place_pad -row IO_EAST -location 4423.5 pad_vco_vdd -master gf180mcu_fd_io__dvdd  ;# pad 95
 place_pad -row IO_EAST -location 4523.5 pad_PWM_sel -master gf180mcu_fd_io__bi_24t  ;# pad 96
 place_pad -row IO_EAST -location 4623.5 pad_VCO_sel -master gf180mcu_fd_io__bi_24t  ;# pad 97
-place_pad -row IO_NORTH -location 1450.5 pad_Seg_sel0 -master gf180mcu_fd_io__bi_24t  ;# pad 98
-place_pad -row IO_NORTH -location 1346.5 pad_Seg_sel1 -master gf180mcu_fd_io__bi_24t  ;# pad 99
-place_pad -row IO_NORTH -location 1242.5 pad_CH_out_sel0 -master gf180mcu_fd_io__bi_24t  ;# pad 100
-place_pad -row IO_NORTH -location 1138.5 pad_CH_out_sel1 -master gf180mcu_fd_io__bi_24t  ;# pad 101
-place_pad -row IO_NORTH -location 1034.5 pad_CH_sel -master gf180mcu_fd_io__bi_24t  ;# pad 102
-place_pad -row IO_NORTH -location 930.5 pad_db_dvss -master gf180mcu_fd_io__dvss  ;# pad 103
-place_pad -row IO_NORTH -location 826.5 pad_db_dvdd -master gf180mcu_fd_io__dvdd  ;# pad 104
-place_pad -row IO_NORTH -location 722.5 pad_CH1_in1 -master gf180mcu_fd_io__bi_24t  ;# pad 105
-place_pad -row IO_NORTH -location 618.5 pad_CH1_in2 -master gf180mcu_fd_io__bi_24t  ;# pad 106
-place_pad -row IO_NORTH -location 514.5 pad_CH2_in1 -master gf180mcu_fd_io__bi_24t  ;# pad 107
-place_pad -row IO_NORTH -location 410.5 pad_CH2_in2 -master gf180mcu_fd_io__bi_24t  ;# pad 108
+place_pad -row IO_NORTH -location 1430.0 pad_Seg_sel0 -master gf180mcu_fd_io__bi_24t  ;# pad 98
+place_pad -row IO_NORTH -location 1330.0 pad_Seg_sel1 -master gf180mcu_fd_io__bi_24t  ;# pad 99
+place_pad -row IO_NORTH -location 1230.0 pad_CH_out_sel0 -master gf180mcu_fd_io__bi_24t  ;# pad 100
+place_pad -row IO_NORTH -location 1130.0 pad_CH_out_sel1 -master gf180mcu_fd_io__bi_24t  ;# pad 101
+place_pad -row IO_NORTH -location 1030.0 pad_CH_sel -master gf180mcu_fd_io__bi_24t  ;# pad 102
+place_pad -row IO_NORTH -location 930.0 pad_db_dvss -master gf180mcu_fd_io__dvss  ;# pad 103
+place_pad -row IO_NORTH -location 830.0 pad_db_dvdd -master gf180mcu_fd_io__dvdd  ;# pad 104
+place_pad -row IO_NORTH -location 730.0 pad_CH1_in1 -master gf180mcu_fd_io__bi_24t  ;# pad 105
+place_pad -row IO_NORTH -location 630.0 pad_CH1_in2 -master gf180mcu_fd_io__bi_24t  ;# pad 106
+place_pad -row IO_NORTH -location 530.0 pad_CH2_in1 -master gf180mcu_fd_io__bi_24t  ;# pad 107
+place_pad -row IO_NORTH -location 430.0 pad_CH2_in2 -master gf180mcu_fd_io__bi_24t  ;# pad 108
 place_pad -row IO_WEST -location 4008.5 brk_w5 -master gf180mcu_fd_io__brk5  ;# after pad 7
 place_pad -row IO_WEST -location 3508.5 brk_w4 -master gf180mcu_fd_io__brk5  ;# after pad 12
 place_pad -row IO_WEST -location 3008.5 brk_w3 -master gf180mcu_fd_io__brk5  ;# after pad 17
