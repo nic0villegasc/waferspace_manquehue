@@ -3,8 +3,11 @@
 # with make publish (see the README). Do not edit the hashes by hand.
 
 croc:
-  note: croc_soc from manquehue_chip, run croc_soc_20261110_134045 (run g). Local until published as a release.
-  path: ~/Documents/waferspace_wip/out/croc
+  note: croc_soc from manquehue_chip, run croc_soc_20261110_134045 (run g)
+  release:
+    repo: nic0villegasc/waferspace_manquehue
+    tag: croc-v1
+    asset: croc-croc-v1.tar.gz
   files:
     croc_soc.gds: f1f8bb0beb2501b60b3ae5c0195eb3f52ec48222d1cb64f802a4bb35cfc45834
     croc_soc.lef: 61484e744ca644421078fd5b11cbcf5b18ac6e0d7c472f7f03f13212a62dc77f
