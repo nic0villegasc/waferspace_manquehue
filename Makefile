@@ -127,7 +127,7 @@ $(PRECHECK)/precheck.py:
 precheck: $(PRECHECK)/precheck.py
 	@mkdir -p $(O)/precheck
 	$(NIX) "make -C $(PRECHECK) clone-pdk && cd $(PRECHECK) && PDK_ROOT=$(PRECHECK)/gf180mcu PDK=gf180mcuD \
-	  python3 precheck.py --input $(CHIP_GDS) --slot 0p5x1 --workers 2 --threads 5 \
+	  python3 precheck.py --input $(CHIP_GDS) --top chip_top --slot 0p5x1 --workers 2 --threads 5 \
 	  --output $(O)/precheck/chip_top.oas" 2>&1 | tee $(O)/precheck/precheck.log || true
 	@grep -q "Precheck successfully completed" $(O)/precheck/precheck.log && echo "precheck: PASS" \
 	  || { echo "precheck: FAIL, see $(O)/precheck/precheck.log"; exit 1; }

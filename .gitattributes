@@ -1,3 +1,8 @@
+# Unix line endings on every machine (Windows or WSL git with core.autocrlf would add CR and break the
+# shell scripts and the Makefile). Layouts and images are binary: never converted.
 * text=auto eol=lf
 *.gds binary
+*.oas binary
 *.png binary
+*.pdf binary
+*.gz binary
