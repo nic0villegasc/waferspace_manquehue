@@ -1,32 +1,17 @@
+# LibreLane flow of the AC3E chip. Used with slot.yaml (die, core, pads) and macros.yaml (macro views and places).
+# croc_soc is a finished hard macro and the DC-DC layouts are merged after this flow (scripts/merge_dcdc.py), so
+# the flow only places the pad ring, wires the CROC pads to croc_soc, and builds the power grid.
+
 meta:
   version: 3
   flow: Chip
   substituting_steps:
-
-    # Render the layout after sealring insertion
+    # Render the layout after the seal ring is added
     KLayout.Render: null
     +KLayout.SealRing: KLayout.Render
-
-    # Disable KLayout DRC
-    #KLayout.DRC: null
-    #Checker.KLayoutDRC: null
-
-    # Disable KLayout antenna check
-    #KLayout.Antenna: null
-    #Checker.KLayoutAntenna: null
-
-    # Disable KLayout density check
-    #KLayout.Density: null
-    #Checker.KLayoutDensity: null
-
-    # Save time during development
-    # Enable for sign-off
-    #OpenROAD.IRDropReport: null
-
-    # Croc chip on the AC3E ring (scripts/gen_chip_ring.py): the checks that cannot pass yet. LVS: the DC-DC
-    # wrappers have no netlist here. DRC/density: the DC-DC layouts (the wafer.space precheck is the
-    # sign-off). Disconnected pins: the DC-DC pad inputs are open on purpose. Power grid: the DC-DC segment
-    # supplies have no grid. No fill for now (KLayout.Filler).
+    # Checks that cannot pass here. LVS and DRC: the DC-DC layouts are not in this flow (the wafer.space precheck
+    # of the merged GDS is the DRC sign-off). Disconnected pins: the DC-DC pad inputs are open on purpose. Power
+    # grid and IR drop: the DC-DC segment supplies have no grid here. No fill and no density check for now.
     OpenROAD.IRDropReport: null
     Checker.PowerGridViolations: null
     Checker.LVS: null
@@ -36,45 +21,29 @@ meta:
     KLayout.Density: null
     Checker.KLayoutDensity: null
     Checker.DisconnectedPins: null
-    #Magic.DRC: null
-    #Checker.MagicDRC: null
-    #KLayout.XOR: null
-    #Netgen.LVS: null
-    #Checker.LVS: null
 
 DESIGN_NAME: chip_top
 VERILOG_FILES:
 - dir::../src/chip_top.sv
 - dir::../src/chip_core.sv
 
-# Enable plugin for better SystemVerilog support
-# USE_SLANG: True
-# SLANG_ARGUMENTS: ['--keep-hierarchy']
-
-# Slightly smaller file sizes
 PRIMARY_GDSII_STREAMOUT_TOOL: klayout
-
-# croc_soc is merged into chip_top from its own GDS, and the cell already exists (empty) from the LEF.
-# With the default RenameCell the macro content lands in an orphan "croc_soc$1" and the chip GDS
-# keeps an empty croc_soc, so every KLayout check silently skips the macro.
+# The croc_soc cell already exists (empty) from its LEF. OverwriteCell puts the macro GDS into it. The default
+# (RenameCell) leaves an empty croc_soc, and every KLayout check would skip the macro without a warning.
 KLAYOUT_CONFLICT_RESOLUTION: OverwriteCell
 
-# SDC files
 PNR_SDC_FILE: dir::chip_top.sdc
 SIGNOFF_SDC_FILE: dir::chip_top.sdc
 FALLBACK_SDC: dir::chip_top.sdc
 
-# Power / ground nets
 VDD_NETS:
 - VDD
 GND_NETS:
 - VSS
 
-# We need to add gf180mcu_fd_io__bi_24t
-# due to the unused Y output for output only pads
+# Cells with outputs left open on purpose: pads (unused Y of output pads, DC-DC pads), breakers, wafer.space IDs
 IGNORE_DISCONNECTED_MODULES:
 - gf180mcu_fd_io__bi_24t
-# the other pad types of the AC3E padframe: the DC-DC pads are tied off, without a core behind them
 - gf180mcu_fd_io__in_c
 - gf180mcu_fd_io__in_s
 - gf180mcu_fd_io__asig_5p0
@@ -87,69 +56,52 @@ IGNORE_DISCONNECTED_MODULES:
 - gf180mcu_ws_ip__logo
 - gf180mcu_ws_ip__marker
 
-# Clock
+# Clock on the clk_i pad output, at croc_soc's sign-off period (55 ns, 18.18 MHz)
 CLOCK_PORT: clk_i
 CLOCK_NET: pad_clk_i/Y
-CLOCK_PERIOD: 55 # 18.18 MHz, matches the croc_soc signoff period
+CLOCK_PERIOD: 55
 
-# Overfix hold violations
-PL_RESIZER_HOLD_SLACK_MARGIN: 0.35
-GRT_RESIZER_HOLD_SLACK_MARGIN: 0.3
+# No clock tree, no buffering, no resizing: the only standard cells at this level are the tie cells of the pad
+# inputs and the taps and fillers of the core rows.
+RUN_CTS: false
+RUN_POST_GPL_DESIGN_REPAIR: false
+RUN_POST_GRT_DESIGN_REPAIR: false
+RUN_POST_CTS_RESIZER_TIMING: false
+RUN_POST_GRT_RESIZER_TIMING: false
+DESIGN_REPAIR_BUFFER_INPUT_PORTS: false
+DESIGN_REPAIR_BUFFER_OUTPUT_PORTS: false
+RUN_HEURISTIC_DIODE_INSERTION: false
 
-# Increase density for more 
-# logic on your die
+# Placement: the rows are only in the column east of croc_soc, so a tie cell can sit far from its pad. It drives a
+# constant, so the long wire does not matter.
 PL_TARGET_DENSITY_PCT: 35
-GRT_ALLOW_CONGESTION: true
-
-# repair_design puts buffers along the long pad-to-macro nets, some inside the macro footprint where
-# there are no rows. The nearest row can be ~500 um away, beyond the old 500/200 limit, and
-# detailed placement failed on those buffers.
-# AC3E padframe: the 1100 um macro leaves only 14 um of core on its left and right, so the tie cells of the pads
-# beside it (one per constant pad input) find no row nearby. 2500 um lets them reach the rows above or below the
-# macro; they drive constants, so the long wires do not matter.
 PL_MAX_DISPLACEMENT_X: 2500
 PL_MAX_DISPLACEMENT_Y: 2500
+GRT_ALLOW_CONGESTION: true
 
-# AC3E padframe: a diode at the sink of every net longer than 200 um. The tie cells of the pads beside the macro
-# sit far from their pads (PL_MAX_DISPLACEMENT above), and their long nets failed the KLayout antenna rule ANT.16
-# although the OpenROAD antenna check passed them.
-RUN_HEURISTIC_DIODE_INSERTION: false   # chip level: no diodes on the wires to the pads
-HEURISTIC_ANTENNA_THRESHOLD: 200
-
-# Fix antenna violations after DRT
+# Antenna repair after detailed routing
 DRT_ANTENNA_REPAIR_ITERS: 10
 DRT_ANTENNA_REPAIR_MARGIN: 10 # %
 
-# PDN
+# Power grid (pdn_cfg.tcl). Each ring segment has its own supply net, so no connection by pin name: pdn_cfg.tcl
+# connects the core cells and croc_soc to VDD and VSS itself.
 PDN_CFG: dir::pdn_cfg.tcl
+PDN_ENABLE_GLOBAL_CONNECTIONS: false
 PDN_ENABLE_PINS: False
-
-# PDN - Straps
+# Core stripes
 PDN_VWIDTH: 5
 PDN_HWIDTH: 5
 PDN_VSPACING: 1
 PDN_HSPACING: 1
 PDN_VPITCH: 75
 PDN_HPITCH: 75
-
-# PDN - Core ring
-# croc_soc's own boundary power ring sits 13um inset from its macro
-# footprint (2um create_pg_ring_pattern offset + croc_soc's own
-# DIE_AREA/CORE_AREA margin) -- confirmed by reading its exported LEF pin
-# geometry directly. The default PDN_HORIZONTAL_HALO/PDN_VERTICAL_HALO
-# (10um) falls short of that, so the parent grid never reaches inward far
-# enough to via-stitch onto croc_soc's ring -- confirmed the cause of
-# OpenROAD.IRDropReport's fatal PSM-0069 ("Check connectivity failed"),
-# all 4 ring shapes reported unconnected. 15um clears it with margin.
+# The core grid stops this far from each macro
 PDN_HORIZONTAL_HALO: 5
 PDN_VERTICAL_HALO: 5
-
+# Core ring: 5 um rings 2 um apart, 2 um outside the core (14 um in all), so it fits below the DC-DC layouts.
+# It connects to the CROC supply pads on Metal2. croc_soc draws about 10 mA.
 PDN_CORE_RING: True
-# Maximum metal width without slotting: 30um
-# AC3E padframe: the ring sits in the 28 um between the pads (376 um from the die edge) and the core (404 um),
-# so it is two 10 um rings 2 um apart, 2 um outside the core. croc_soc draws about 10 mA, far below what 10 um
-# of Metal3/Metal4 carries.
-PDN_CORE_RING_VWIDTH: 5   # croc chip: 14 um ring, so it fits below the DC-DC wrappers
+PDN_CORE_RING_VWIDTH: 5
 PDN_CORE_RING_HWIDTH: 5
 PDN_CORE_RING_VSPACING: 2
 PDN_CORE_RING_HSPACING: 2
@@ -160,16 +112,11 @@ PDN_CORE_VERTICAL_LAYER: Metal4
 PDN_CORE_HORIZONTAL_LAYER: Metal3
 PDN_CORE_RING_CONNECT_TO_PAD_LAYERS: [Metal2]
 
-# Do not error on magic DRC violations
-# Note: Passing magic DRC is not required for the submission.
-# However, it is recommended to fix or carefully review all violations.
+# Magic: report DRC but do not stop on it, and flatten these PDK cells to avoid false errors (contacts, the SRAM
+# cells, and cells that draw 3.3 V devices in a higher cell).
 ERROR_ON_MAGIC_DRC: False
-
-# Prevent false positive DRC errors in I/O cells
 MAGIC_GDS_FLATGLOB:
-# For contacts
 - "*_CDNS_*"
-# Foundry provided SRAMs
 - "*$$*"
 - "M1_N*"
 - "M1_P*"
@@ -182,8 +129,6 @@ MAGIC_GDS_FLATGLOB:
 - "via1_*"
 - "ypass_gate*"
 - "G_ring_*"
-# These additional cells must be flattened to get rid of 3.3V devices
-# (DUALGATE drawn into high-level cells)
 - "dcap_103*"
 - "din_*"
 - "mux821_*"
@@ -197,57 +142,19 @@ MAGIC_GDS_FLATGLOB:
 - "xdec16_*"
 - "xdec32_*"
 - "sa_*"
-
-# Since we cannot meet the minimum density limit on Metal2,
-# ignore active metal on previous and subsequent layers
-# (DM.5_DM.7 and DM.4_DM.6). Dummy metal is moved to active
-# metal during the precheck.
-KLAYOUT_FILLER_OPTIONS:
-  Metal2_ignore_active: true
-
-# Because we have multiple power pads for one power domain
+# Several pads per supply net
 MAGIC_EXT_UNIQUE: notopports
 
-# Image render settings
+# KLayout: picture of the chip, and the DRC and antenna decks
 KLAYOUT_RENDER_RESOLUTION: 2048
 KLAYOUT_RENDER_OVERSAMPLING: 3
 KLAYOUT_PROPERTIES: dir::gf180mcu_render.lyp
-
-# DRC settings
-# A high number of workers increases RAM usage,
-# but can significantly improve the performance.
-# workers * threads should equal the available
-# hardware threads for a best possible utilization.
-
 KLAYOUT_DRC_THREADS: 1
-
-# "max" equals max hardware threads
 KLAYOUT_DRC_OPTIONS:
-  decks: "all,-antenna,-density,-cup" # disable CUP for now
+  decks: "all,-antenna,-density,-cup"
   variant: ref::$PDK
   workers: max
-
-KLAYOUT_DENSITY_OPTIONS:
-  decks: "density"
-  variant: ref::$PDK
-  workers: max
-
 KLAYOUT_ANTENNA_OPTIONS:
   decks: "antenna"
   variant: ref::$PDK
   workers: max
-
-# Chip level: croc_soc is a hard macro and the DC-DC layouts come in afterwards (scripts/merge_dcdc.py), so only the
-# pad ring and wires remain. No clock tree and no buffering or resizing: these steps add cells on the clock and on
-# long nets. The only cells left are the tie cells of the pad inputs and the taps and fillers of the core rows.
-RUN_CTS: false
-RUN_POST_GPL_DESIGN_REPAIR: false
-RUN_POST_GRT_DESIGN_REPAIR: false
-RUN_POST_CTS_RESIZER_TIMING: false
-RUN_POST_GRT_RESIZER_TIMING: false
-DESIGN_REPAIR_BUFFER_INPUT_PORTS: false
-DESIGN_REPAIR_BUFFER_OUTPUT_PORTS: false
-
-# One supply net per ring segment (chip_top.sv, USE_POWER_PINS): no automatic connection by pin name, which would
-# put every pad on VDD. pdn_cfg.tcl connects the core cells and croc_soc explicitly.
-PDN_ENABLE_GLOBAL_CONNECTIONS: false

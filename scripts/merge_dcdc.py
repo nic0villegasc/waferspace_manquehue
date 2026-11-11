@@ -1,10 +1,9 @@
-# Put the DC-DC wrapper layouts into the chip GDS, where they were drawn (they are in chip coordinates).
+# Copy the DC-DC layouts into the chip GDS, at the place where they are drawn (make merge).
 # usage: klayout -b -r scripts/merge_dcdc.py -rd input=<chip_top.gds> -rd output=<gds> [-rd gds_dir=macros/dcdc_v0]
-# Every <name>.gds in gds_dir goes in, and its top cell must be named <name>. Each layout is placed at (0, 0), so it
-# must be drawn in chip coordinates.
-# The wrappers are not in the LibreLane netlist (gen_chip_ring.py): OpenROAD wants every macro to fit the core area,
-# and 8_segs_wrapper reaches 3 um into the east pads. Zero-area shapes are dropped (the wafer.space precheck rejects
-# them; DB_VCO_wrapper has one in n_mirror), and subcells get the wrapper name as prefix if the chip has the name.
+# Every <name>.gds in gds_dir goes in. Its top cell must be named <name> and drawn in chip coordinates.
+# They stay out of LibreLane because they reach into the pad area, which OpenROAD does not accept for a macro.
+# Shapes with zero area are dropped (the wafer.space precheck rejects them), and a subcell whose name the chip
+# already has gets the layout name as a prefix.
 import glob
 import os
 import pya

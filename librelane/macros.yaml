@@ -1,5 +1,7 @@
+# Every macro of the chip: where its views come from and where it sits. The wafer.space IDs are required by the
+# shuttle (ip/). croc_soc comes from macros/croc (make macro). An own pad cell goes here too, with its gds, lef and
+# vh, and no instances entry (the pad ring places it).
 MACROS:
-  # required: will be replaced with actual content
   gf180mcu_ws_ip__qrcode_id:
     gds:
       - dir::../ip/gf180mcu_ws_ip__qrcode_id/gds/gf180mcu_ws_ip__qrcode_id.gds
@@ -15,7 +17,6 @@ MACROS:
         location: [26, 26]
         orientation: N
 
-  # required: will be replaced with actual content
   gf180mcu_ws_ip__shuttle_id:
     gds:
       - dir::../ip/gf180mcu_ws_ip__shuttle_id/gds/gf180mcu_ws_ip__shuttle_id.gds
@@ -31,7 +32,6 @@ MACROS:
         location: [26, 175.6]
         orientation: E
 
-  # required: will be replaced with actual content
   gf180mcu_ws_ip__project_id:
     gds:
       - dir::../ip/gf180mcu_ws_ip__project_id/gds/gf180mcu_ws_ip__project_id.gds
@@ -47,7 +47,6 @@ MACROS:
         location: [175.6, 26]
         orientation: N
 
-  # required: top right corner marker
   gf180mcu_ws_ip__marker:
     gds:
       - dir::../ip/gf180mcu_ws_ip__marker/gds/gf180mcu_ws_ip__marker.gds
@@ -78,13 +77,8 @@ MACROS:
         location: [26, "expr::$DIE_AREA[3] - 169.25"]
         orientation: N
 
-  # croc_soc: the RISC-V SoC macro of manquehue_chip, integrated as a hardened macro (not resynthesized RTL).
-  # All views come from one finished run of manquehue_chip, through the link macros/croc
-  # (not in git):  make macro RUN=<croc run>
-  #   croc_soc.gds, croc_soc.lef  Fusion Compiler (scripts/06_finish.tcl: create_frame + write_lef)
-  #   croc_soc_bb.v               port stub written by 06_finish from the netlist of the same run
-  #   etm/croc_soc_<corner>.lib   PrimeTime timing models (scripts/signoff/sta/extract_models.sh), so the
-  #                               chip-level STA times through the macro
+  # croc_soc from a manquehue_chip run (macros/croc): GDS and LEF of the finished block, its port stub, and its
+  # PrimeTime timing models, so the chip STA times through it.
   croc_soc:
     gds:
       - dir::../macros/croc/croc_soc.gds
@@ -100,9 +94,7 @@ MACROS:
       "*_ss_125C_4v50":
         - dir::../macros/croc/etm/croc_soc_slow.lib
     instances:
-      # Croc chip: lower-left corner of the core, so the DC-DC wrappers fit above it (croc_soc ends at y = 2202.32)
-      # and the tie cells have rows east of it. Its pins were placed for an earlier pad position, so some wires run
-      # along the macro edge.
+      # Lower-left corner of the core, below the DC-DC layouts. manquehue_chip CROC_MACRO_LL must be the same.
       i_chip_core.i_croc_soc:
         location: [392, 404]
         orientation: N

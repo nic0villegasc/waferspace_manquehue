@@ -2,7 +2,7 @@
 # Run every target from this folder in a normal shell. Each one enters the nix-shell of this repository.
 #
 #   make macro RUN=<croc run>   timing models of a manquehue_chip run, then point macros/croc at it
-#   make ring                   src/chip_top.sv, pad_cfg.tcl and the pad lists from padring.txt
+#   make ring                   src/chip_top.sv, librelane/pad_cfg.tcl and slot.yaml from padring.txt
 #   make chip                   LibreLane: pad ring, croc_soc, wires (30 to 60 min)
 #   make merge                  DC-DC layouts (DCDC) into the chip GDS: chip_top_dcdc.gds
 #   make gls                    chip GLS: JTAG boot, flash + ADC read, flash + radio (gls-jtag, gls-adc, gls-radio)
@@ -33,7 +33,7 @@ NIX        := cd $(T) && nix-shell --run
 PDK_ROOT   ?= $(T)/gf180mcu
 PDK        ?= gf180mcuD
 PDK_COMMIT ?= f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7
-LL_CONFIGS := librelane/slot.yaml librelane/macros.yaml librelane/config.yaml
+LL_CONFIGS := librelane/slots/slot_ac3e.yaml librelane/macros/macros.yaml librelane/config.yaml
 LL_OPTS    := --pdk $(PDK) --pdk-root $(PDK_ROOT) --manual-pdk --scl gf180mcu_fd_sc_mcu7t5v0 --pad gf180mcu_fd_io
 CHIP_GLS   := TB=tb_chip_ac3e bash $(CROC)/scripts/sim/run_chip_gls.sh $(CR)/final/pnl/chip_top.pnl.v $(MACRO)/croc_soc.v
 
@@ -55,8 +55,14 @@ macro:
 	ln -sfn $(MACRO) $(T)/macros/croc
 	@echo "macros/croc -> $$(readlink $(T)/macros/croc)"
 
+# The ring comes from padring.txt here. manquehue_chip keeps a copy to place the croc_soc pins: warn if the CROC
+# pads (27 to 72) of the two copies differ, because then the macro pins no longer face their pads.
 ring:
-	python3 $(T)/scripts/gen_chip_ring.py $(CROC)/scripts/chip/padring.txt
+	python3 $(T)/scripts/gen_chip_ring.py $(T)/padring.txt
+	@mkdir -p $(O)
+	@awk '$$1=="pad" && $$2>=27 && $$2<=72' $(T)/padring.txt > $(O)/croc_pads.here
+	@awk '$$1=="pad" && $$2>=27 && $$2<=72' $(CROC)/scripts/chip/padring.txt > $(O)/croc_pads.croc 2>/dev/null || true
+	@cmp -s $(O)/croc_pads.here $(O)/croc_pads.croc || echo "WARNING: CROC pads differ from $(CROC)/scripts/chip/padring.txt: build the macro again"
 
 chip: pdk
 	@mkdir -p $(O)

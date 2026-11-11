@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
-"""Write the AC3E pad ring of the croc chip for LibreLane, from the pad table of the manquehue_chip FC flow.
+"""Write the AC3E pad ring for LibreLane from padring.txt.
 
-usage: scripts/gen_chip_ring.py [<padring.txt>]   (from the repository root)
-       default: ../manquehue_chip/scripts/chip/padring.txt
+usage: python3 scripts/gen_chip_ring.py [padring.txt]     (make ring; default: padring.txt in the repository root)
 
-Writes:
-  src/chip_top.sv                 every pad (pad_<signal>) and breaker, the wafer.space IPs, and chip_core (croc_soc)
-                                  on the CROC pads. Supplies (USE_POWER_PINS): DVDD and VDD of each pad on the net of
-                                  its ring segment (seg lines of padring.txt; VDD in the CROC segment), DVSS and VSS on
-                                  VSS. The core-side inputs of the DC-DC pads stay open (the wrappers drive them). The
-                                  DC-DC wrappers come into the GDS afterwards (merge_dcdc.py).
-  librelane/pad_cfg.tcl  every pad and breaker at its table position (PAD_CFG of the slot)
-  librelane/slot.yaml  the PAD_SOUTH/EAST/NORTH/WEST lists (the rest of the slot is kept)
+Writes three files. Do not edit them by hand:
+  src/chip_top.sv         every pad and breaker, the wafer.space IPs, and chip_core (croc_soc) on the CROC pads
+  librelane/pad_cfg.tcl   the position of every pad and breaker (PAD_CFG of slot.yaml)
+  librelane/slot.yaml     the PAD_SOUTH/EAST/NORTH/WEST lists (the rest of the file is kept)
+
+padring.txt lines:
+  pad <n> <signal> <cell>     <cell> is a gf180mcu_fd_io cell without its prefix (bi_24t, in_s, dvdd, asig_5p0...),
+                              or a full cell name with "__" for an own pad cell (see macros.yaml for its views)
+  brk <name> <after pad>      a brk5 ring breaker in the gap after that pad
+  seg <net> <pads> ...        supply segment: DVDD and VDD of these pads on <net>. VDD is the CROC segment.
 """
 import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "manquehue_chip/scripts/chip/padring.txt"
+SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "padring.txt"
 TOP = ROOT / "src" / "chip_top.sv"
 PADCFG = ROOT / "librelane" / "pad_cfg.tcl"
 SLOT = ROOT / "librelane" / "slot.yaml"
 
-# pad signal -> (kind, chip_core nets, pull), as scripts/gen_chip_top.py. kind: in (in_c/in_s), bin (bi_24t input),
-# bout (bi_24t output), bio (bi_24t bidirectional: out, oe, in, ie)
+# CROC pins: pad signal -> (kind, chip_core nets, pull). Kinds: in (in_c/in_s input pad), bin (bi_24t as input),
+# bout (bi_24t as output), bio (bi_24t both ways: out, out enable, in, in enable).
 PINS = {
     "clk_i":        ("in",   ["clk_i"], None),
     "rst_ni":       ("in",   ["rst_ni"], None),
@@ -60,8 +61,15 @@ PINS = {
     "gpio0_io":     ("bio",  ["gpio_o[0]", "gpio_out_en_o[0]", "gpio_i[0]", "gpio_ie[0]"], None),
     "gpio1_io":     ("bio",  ["gpio_o[1]", "gpio_out_en_o[1]", "gpio_i[1]", "gpio_ie[1]"], None),
 }
-SUPPLY = {"dvdd", "dvss"}
+SUPPLY = {"dvdd", "dvss"}       # supply pads: no signal pin
 
+
+def master(cell):
+    """Cell name in the layout: a PDK pad by its short name, or an own pad cell by its full name."""
+    return cell if "__" in cell else "gf180mcu_fd_io__" + cell
+
+
+# 1. Read the table
 pads, brks, seg_of = [], [], {}
 for line in SRC.read_text().splitlines():
     f = line.split()
@@ -79,8 +87,9 @@ for line in SRC.read_text().splitlines():
 croc_pads = {n for n, net in seg_of.items() if net == "VDD"}
 
 
+# 2. Position of a pad number: side and lower-left coordinate along it (y on west/east, x on south/north).
+#    43 pads per long side at 100 um, 11 per short side at 104 um, numbered counterclockwise from the top left.
 def side_loc(n):
-    """Side and lower-left coordinate along it (y on west/east, x on south/north), as chip_floorplan.tcl."""
     if n <= 43:
         return "WEST", 4623.5 - 100.0 * (n - 1)
     if n <= 54:
@@ -90,11 +99,17 @@ def side_loc(n):
     return "NORTH", 1450.5 - 104.0 * (n - 98)
 
 
+def brk_loc(side, loc):
+    """A breaker sits centred in the 25 um gap after its pad."""
+    return loc - 15.0 if side == "WEST" else loc + 85.0
+
+
+# 3. src/chip_top.sv
 def c(net):
     return "c_" + net
 
 
-NETS = {}
+NETS = {}       # chip_core bus widths, from the PINS table
 for kind, nets, _ in PINS.values():
     for n in nets:
         m = re.match(r"(\w+)(?:\[(\d+)\])?$", n)
@@ -102,14 +117,14 @@ for kind, nets, _ in PINS.values():
 
 
 def pg(seg, cell):
-    vdd = seg
-    pins = ["DVDD", "DVSS", "VDD", "VSS"]
-    conn = {"DVDD": vdd, "VDD": vdd, "DVSS": "VSS", "VSS": "VSS"}
-    return "        `ifdef USE_POWER_PINS\n" + ",\n".join("        .%-4s (%s)" % (p, conn[p]) for p in pins) + \
+    """Supply pins: DVDD and VDD on the segment net, DVSS and VSS on the common VSS."""
+    conn = {"DVDD": seg, "DVSS": "VSS", "VDD": seg, "VSS": "VSS"}
+    return "        `ifdef USE_POWER_PINS\n" + ",\n".join("        .%-4s (%s)" % (p, conn[p]) for p in conn) + \
            ("\n        `endif" if cell in SUPPLY else ",\n        `endif")
 
 
 def bi(sig, a, oe, ie, pu, pd, y):
+    """Pins of a bi_24t pad."""
     return ("        .A     (%s),\n        .OE    (%s),\n        .CS    (1'b0),\n        .SL    (1'b0),\n"
             "        .IE    (%s),\n        .PU    (%s),\n        .PD    (%s),\n        .Y     (%s),\n"
             "        .PAD   (%s)" % (a, oe, ie, pu, pd, y, sig))
@@ -118,13 +133,12 @@ def bi(sig, a, oe, ie, pu, pd, y):
 ports, body, done = [], [], set()
 for n, sig, cell in pads:
     seg = seg_of[n]
-    master = "gf180mcu_fd_io__" + cell
-    head = "    // pad %d: %s (segment %s)\n    (* keep *) %s pad_%s (\n" % (n, sig, seg, master, sig)
+    head = "    // pad %d: %s (segment %s)\n    (* keep *) %s pad_%s (\n" % (n, sig, seg, master(cell), sig)
     if cell in SUPPLY:
         body.append(head + pg(seg, cell) + "\n    );\n")
         continue
     ports.append("    %s wire %s" % ("input " if cell in ("in_c", "in_s") else "inout ", sig))
-    if sig in PINS:
+    if sig in PINS:                                     # CROC pad: core side to chip_core
         kind, nets, pull = PINS[sig]
         pu = "1'b1" if pull == "pu" else "1'b0"
         pd = "1'b1" if pull == "pd" else "1'b0"
@@ -138,10 +152,9 @@ for n, sig, cell in pads:
         else:
             conn = bi(sig, nets[0], nets[1], nets[3], pu, pd, nets[2])
         done.add(sig)
-    elif n in croc_pads:
-        conn = bi(sig, "1'b0", "1'b0", "1'b0", "1'b0", "1'b1", "")       # spare pad of the CROC segment: off
-    else:
-        # DC-DC pad: the wrapper drives the core side by abutment
+    elif n in croc_pads:                                # spare pad of the CROC segment: off, pulled down
+        conn = bi(sig, "1'b0", "1'b0", "1'b0", "1'b0", "1'b1", "")
+    else:                                               # DC-DC pad: its core side is driven by the DC-DC layout
         conn = "        .%s (%s)" % ("ASIG5V" if cell == "asig_5p0" else "PAD   ", sig)
     body.append(head + pg(seg, cell) + "\n" + conn + "\n    );\n")
 missing = set(PINS) - done
@@ -152,8 +165,7 @@ for brk, n in brks:
     body.append("    // ring breaker after pad %d: cuts DVDD, DVSS and VDD, VSS runs through\n"
                 "    (* keep *) gf180mcu_fd_io__brk5 %s (\n        `ifdef USE_POWER_PINS\n        .VSS (VSS)\n"
                 "        `endif\n    );\n" % (n, brk))
-# The DC-DC wrappers are not in the netlist: they are wider than the core area OpenROAD allows (IFP-0002, the
-# 8_segs wrapper reaches 3 um into the east pads). scripts/merge_dcdc.py puts their layouts into the final GDS.
+# The DC-DC layouts are not in the netlist: scripts/merge_dcdc.py copies them into the final GDS.
 
 # wafer.space IPs (positions in librelane/macros.yaml)
 body.append("    // wafer.space IPs\n" + "".join("    (* keep *) gf180mcu_ws_ip__%s %s ();\n" % (r, i) for r, i in (
@@ -173,15 +185,14 @@ TOP.write_text(
     "endmodule\n\n`default_nettype wire\n" % (
         SRC.name, "".join("    inout  wire %s,\n" % s for s in segs), ",\n".join(ports), decl, "".join(body), core))
 
-# pad_cfg.tcl: every pad and breaker at its table position
+# 4. librelane/pad_cfg.tcl: LibreLane's pad placement script with every pad and breaker at its table position
 lines = []
 for n, sig, cell in pads:
     side, loc = side_loc(n)
-    lines.append("place_pad -row IO_%s -location %.1f pad_%s -master gf180mcu_fd_io__%s  ;# pad %d" % (side, loc, sig, cell, n))
+    lines.append("place_pad -row IO_%s -location %.1f pad_%s -master %s  ;# pad %d" % (side, loc, sig, master(cell), n))
 for brk, n in brks:
     side, loc = side_loc(n)
-    bloc = loc - 15.0 if side == "WEST" else loc + 85.0
-    lines.append("place_pad -row IO_%s -location %.1f %s -master gf180mcu_fd_io__brk5  ;# after pad %d" % (side, bloc, brk, n))
+    lines.append("place_pad -row IO_%s -location %.1f %s -master gf180mcu_fd_io__brk5  ;# after pad %d" % (side, brk_loc(side, loc), brk, n))
 signal = " ".join("pad_" + s for _, s, cell in pads if cell not in SUPPLY)
 PADCFG.write_text("""# GENERATED by scripts/gen_chip_ring.py from %s; do not edit.
 # Pad placement for the OpenROAD.PadRing step (PAD_CFG). Based on LibreLane's
@@ -225,14 +236,14 @@ if { [info exists ::env(PAD_PLACE_IO_TERMINALS)] } {
 remove_io_rows
 """ % (SRC.name, "\n".join(lines), signal))
 
-# slot: the four pad lists in LibreLane order (south/north left to right, east/west bottom to top)
+# 5. librelane/slot.yaml: the four pad lists, each sorted along its side
 by_side = {"SOUTH": [], "EAST": [], "NORTH": [], "WEST": []}
 for n, sig, cell in pads:
     side, loc = side_loc(n)
     by_side[side].append((loc, "pad_" + sig))
 for brk, n in brks:
     side, loc = side_loc(n)
-    by_side[side].append((loc - 15.0 if side == "WEST" else loc + 85.0, brk))
+    by_side[side].append((brk_loc(side, loc), brk))
 slot = SLOT.read_text()
 slot = slot[:slot.index("PAD_SOUTH:")].rstrip() + "\n\n" + "\n\n".join(
     "PAD_%s: [\n%s\n]" % (s, ",\n".join("    " + i for _, i in sorted(by_side[s]))) for s in ("SOUTH", "EAST", "NORTH", "WEST")) + "\n"

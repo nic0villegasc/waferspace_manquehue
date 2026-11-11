@@ -1,11 +1,9 @@
-# Slot for the AC3E pad ring of the croc chip: 108 pads, 12 breakers, DC-DC in the north, croc_soc on the CROC
-# segment (pads 27 to 72). The pad lists below and librelane/pad_cfg.tcl come from scripts/gen_chip_ring.py.
+# Die, core and pad lists of the AC3E chip. The pad lists at the end are written by make ring (do not edit them).
 
 # Floorplanning
 FP_SIZING: absolute
 DIE_AREA: [0, 0, 1936, 5122]
-# Croc chip: rows only below the DC-DC wrappers (croc_soc ends at 2202.32, the 14 um core ring at 2220, 8_segs_wrapper
-# starts at 2224.36). 2 um between the core ring and the pads, rows for the tie cells east of croc_soc.
+# Core: from the core ring to just above croc_soc (top at 2202.32). The DC-DC layouts sit above it.
 CORE_AREA: [392, 404, 1544, 2206]
 
 VERILOG_DEFINES: ["SLOT_AC3E"]
