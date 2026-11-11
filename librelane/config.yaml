@@ -35,6 +35,8 @@ KLAYOUT_CONFLICT_RESOLUTION: OverwriteCell
 PNR_SDC_FILE: dir::chip_top.sdc
 SIGNOFF_SDC_FILE: dir::chip_top.sdc
 FALLBACK_SDC: dir::chip_top.sdc
+# STA steps: no power report (it crashes on the pad pins tied to VDD and VSS), see sta_extra.tcl
+STA_EXTRA_CORNER_TCL_FILE: dir::sta_extra.tcl
 
 VDD_NETS:
 - VDD

@@ -25,6 +25,8 @@ set dbu [$tech getDbUnitsPerMicron]
 foreach {pin net type} {VDD VDD -power VNW VDD -power VSS VSS -ground VPW VSS -ground} {
     add_global_connection -net $net -inst_pattern {^(?!pad_|brk_|IO_|u_8|u_DB).*} -pin_pattern "^${pin}\$" $type
 }
+# Constant pad pins (OE, IE, PU, PD, CS, SL) on VDD or VSS: the core ring's connect_to_pads draws their Metal2 stubs
+source [file join [file dirname [info script]] pad_ties.tcl]
 global_connect
 
 set_voltage_domain -name CORE -power $::env(VDD_NET) -ground $::env(GND_NET)
