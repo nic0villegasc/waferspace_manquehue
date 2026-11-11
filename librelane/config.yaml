@@ -21,6 +21,9 @@ meta:
     KLayout.Density: null
     Checker.KLayoutDensity: null
     Checker.DisconnectedPins: null
+    # No DRC runs here: the DC-DC layouts are merged afterwards, so the precheck of the merged GDS is the DRC
+    KLayout.DRC: null
+    Magic.DRC: null
 
 DESIGN_NAME: chip_top
 VERILOG_FILES:
