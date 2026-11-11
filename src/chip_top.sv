@@ -73,18 +73,9 @@ module chip_top (
     input  wire testmode_i,
     input  wire ref_clk_i,
     input  wire rst_ni,
-    inout  wire PS3_Vc_0,
-    inout  wire PS3_Vc_1,
-    inout  wire PS3_Vc_2,
-    inout  wire PS3_Vc_3,
-    inout  wire PS2_Vc_0,
-    inout  wire PS2_Vc_1,
-    inout  wire PS2_Vc_2,
-    inout  wire PS2_Vc_3,
-    inout  wire PS1_Vc_0,
-    inout  wire PS1_Vc_1,
-    inout  wire PS1_Vc_2,
-    inout  wire PS1_Vc_3,
+    inout  wire PS3_Vc,
+    inout  wire PS2_Vc,
+    inout  wire PS1_Vc,
     inout  wire V_REF,
     inout  wire V_FB,
     inout  wire PWM_sel,
@@ -1124,45 +1115,37 @@ module chip_top (
         .VSS  (VSS)
         `endif
     );
-    // pad 74: PS3_Vc_0 (segment PS3_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS3_Vc_0 (
+    // pad 74: PS3_Vc_0 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS3_Vc_0 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS3_VDD),
         .DVSS (VSS),
-        .VDD  (PS3_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS3_Vc_0)
+        .DVDD (PS3_Vc)
     );
-    // pad 75: PS3_Vc_1 (segment PS3_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS3_Vc_1 (
+    // pad 75: PS3_Vc_1 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS3_Vc_1 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS3_VDD),
         .DVSS (VSS),
-        .VDD  (PS3_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS3_Vc_1)
+        .DVDD (PS3_Vc)
     );
-    // pad 76: PS3_Vc_2 (segment PS3_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS3_Vc_2 (
+    // pad 76: PS3_Vc_2 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS3_Vc_2 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS3_VDD),
         .DVSS (VSS),
-        .VDD  (PS3_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS3_Vc_2)
+        .DVDD (PS3_Vc)
     );
-    // pad 77: PS3_Vc_3 (segment PS3_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS3_Vc_3 (
+    // pad 77: PS3_Vc_3 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS3_Vc_3 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS3_VDD),
         .DVSS (VSS),
-        .VDD  (PS3_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS3_Vc_3)
+        .DVDD (PS3_Vc)
     );
     // pad 78: ps3_vdd_e (segment PS3_VDD)
     (* keep *) gf180mcu_fd_io__dvdd pad_ps3_vdd_e (
@@ -1191,45 +1174,37 @@ module chip_top (
         .VSS  (VSS)
         `endif
     );
-    // pad 81: PS2_Vc_0 (segment PS2_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS2_Vc_0 (
+    // pad 81: PS2_Vc_0 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS2_Vc_0 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS2_VDD),
         .DVSS (VSS),
-        .VDD  (PS2_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS2_Vc_0)
+        .DVDD (PS2_Vc)
     );
-    // pad 82: PS2_Vc_1 (segment PS2_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS2_Vc_1 (
+    // pad 82: PS2_Vc_1 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS2_Vc_1 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS2_VDD),
         .DVSS (VSS),
-        .VDD  (PS2_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS2_Vc_1)
+        .DVDD (PS2_Vc)
     );
-    // pad 83: PS2_Vc_2 (segment PS2_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS2_Vc_2 (
+    // pad 83: PS2_Vc_2 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS2_Vc_2 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS2_VDD),
         .DVSS (VSS),
-        .VDD  (PS2_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS2_Vc_2)
+        .DVDD (PS2_Vc)
     );
-    // pad 84: PS2_Vc_3 (segment PS2_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS2_Vc_3 (
+    // pad 84: PS2_Vc_3 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS2_Vc_3 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS2_VDD),
         .DVSS (VSS),
-        .VDD  (PS2_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS2_Vc_3)
+        .DVDD (PS2_Vc)
     );
     // pad 85: ps2_vdd_e (segment PS2_VDD)
     (* keep *) gf180mcu_fd_io__dvdd pad_ps2_vdd_e (
@@ -1249,45 +1224,37 @@ module chip_top (
         .VSS  (VSS)
         `endif
     );
-    // pad 87: PS1_Vc_0 (segment PS1_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS1_Vc_0 (
+    // pad 87: PS1_Vc_0 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS1_Vc_0 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS1_VDD),
         .DVSS (VSS),
-        .VDD  (PS1_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS1_Vc_0)
+        .DVDD (PS1_Vc)
     );
-    // pad 88: PS1_Vc_1 (segment PS1_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS1_Vc_1 (
+    // pad 88: PS1_Vc_1 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS1_Vc_1 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS1_VDD),
         .DVSS (VSS),
-        .VDD  (PS1_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS1_Vc_1)
+        .DVDD (PS1_Vc)
     );
-    // pad 89: PS1_Vc_2 (segment PS1_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS1_Vc_2 (
+    // pad 89: PS1_Vc_2 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS1_Vc_2 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS1_VDD),
         .DVSS (VSS),
-        .VDD  (PS1_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS1_Vc_2)
+        .DVDD (PS1_Vc)
     );
-    // pad 90: PS1_Vc_3 (segment PS1_VDD)
-    (* keep *) gf180mcu_fd_io__asig_5p0 pad_PS1_Vc_3 (
+    // pad 90: PS1_Vc_3 (segment none)
+    (* keep *) gf180mcu_fd_io__dvdd_no_clamp pad_PS1_Vc_3 (
         `ifdef USE_POWER_PINS
-        .DVDD (PS1_VDD),
         .DVSS (VSS),
-        .VDD  (PS1_VDD),
         .VSS  (VSS),
         `endif
-        .ASIG5V (PS1_Vc_3)
+        .DVDD (PS1_Vc)
     );
     // pad 91: ps1_vdd_e (segment PS1_VDD)
     (* keep *) gf180mcu_fd_io__dvdd pad_ps1_vdd_e (
@@ -1532,6 +1499,42 @@ module chip_top (
     );
     // ring breaker after pad 95: cuts DVDD, DVSS and VDD, VSS runs through
     (* keep *) gf180mcu_fd_io__brk5 brk_e5 (
+        `ifdef USE_POWER_PINS
+        .VSS (VSS)
+        `endif
+    );
+    // ring breaker after pad 73: cuts DVDD, DVSS and VDD, VSS runs through
+    (* keep *) gf180mcu_fd_io__brk5 brk_ps3a (
+        `ifdef USE_POWER_PINS
+        .VSS (VSS)
+        `endif
+    );
+    // ring breaker after pad 77: cuts DVDD, DVSS and VDD, VSS runs through
+    (* keep *) gf180mcu_fd_io__brk5 brk_ps3b (
+        `ifdef USE_POWER_PINS
+        .VSS (VSS)
+        `endif
+    );
+    // ring breaker after pad 80: cuts DVDD, DVSS and VDD, VSS runs through
+    (* keep *) gf180mcu_fd_io__brk5 brk_ps2a (
+        `ifdef USE_POWER_PINS
+        .VSS (VSS)
+        `endif
+    );
+    // ring breaker after pad 84: cuts DVDD, DVSS and VDD, VSS runs through
+    (* keep *) gf180mcu_fd_io__brk5 brk_ps2b (
+        `ifdef USE_POWER_PINS
+        .VSS (VSS)
+        `endif
+    );
+    // ring breaker after pad 86: cuts DVDD, DVSS and VDD, VSS runs through
+    (* keep *) gf180mcu_fd_io__brk5 brk_ps1a (
+        `ifdef USE_POWER_PINS
+        .VSS (VSS)
+        `endif
+    );
+    // ring breaker after pad 90: cuts DVDD, DVSS and VDD, VSS runs through
+    (* keep *) gf180mcu_fd_io__brk5 brk_ps1b (
         `ifdef USE_POWER_PINS
         .VSS (VSS)
         `endif

@@ -69,6 +69,9 @@ PINS = {
     "gpio1_io":     ("bio",  ["gpio_o[1]", "gpio_out_en_o[1]", "gpio_i[1]", "gpio_ie[1]"], None),
 }
 SUPPLY = {"dvdd", "dvss"}       # supply pads: no signal pin
+# Own pad cells whose DVDD pin is the bond pad of a signal (no clamp): they belong to no supply segment, and the
+# breaker next to them stops the ring DVDD run. DVSS and VSS stay on the ring.
+SIGNAL_DVDD = {"gf180mcu_fd_io__dvdd_no_clamp"}
 
 
 # gf180mcu_fd_io cells by their short name. Any other name in padring.txt is an own pad cell, used as it is.
@@ -144,10 +147,17 @@ def bi(sig, a, oe, ie, pu, pd, y):
 
 ports, body, done = [], [], set()
 for n, sig, cell in pads:
-    seg = seg_of[n]
+    seg = seg_of.get(n, "none" if cell in SIGNAL_DVDD else None)
     head = "    // pad %d: %s (segment %s)\n    (* keep *) %s pad_%s (\n" % (n, sig, seg, master(cell), sig)
     if cell in SUPPLY:
         body.append(head + pg(seg, cell) + "\n    );\n")
+        continue
+    if cell in SIGNAL_DVDD:                             # the pads of one channel (PS3_Vc_0..3) are one net: PS3_Vc
+        net = re.sub(r"_\d+$", "", sig)
+        if "    inout  wire %s" % net not in ports:
+            ports.append("    inout  wire %s" % net)
+        body.append(head + "        `ifdef USE_POWER_PINS\n        .DVSS (VSS),\n        .VSS  (VSS),\n        `endif\n"
+                    "        .DVDD (%s)\n    );\n" % net)
         continue
     ports.append("    %s wire %s" % ("input " if cell in ("in_c", "in_s") else "inout ", sig))
     if sig in PINS:                                     # CROC pad: core side to chip_core

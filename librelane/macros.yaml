@@ -77,6 +77,16 @@ MACROS:
         location: [26, "expr::$DIE_AREA[3] - 169.25"]
         orientation: N
 
+  # Modified DVDD pad without clamp (macros/pad_nc): the DVDD pin is the bond pad of a DC-DC output (PSx_Vc_n).
+  # An own pad cell has no instances entry: the pad ring places it (padring.txt).
+  gf180mcu_fd_io__dvdd_no_clamp:
+    gds:
+      - dir::../macros/pad_nc/gf180mcu_fd_io__dvdd_no_clamp.gds
+    lef:
+      - dir::../macros/pad_nc/gf180mcu_fd_io__dvdd_no_clamp.lef
+    vh:
+      - dir::../macros/pad_nc/gf180mcu_fd_io__dvdd_no_clamp.v
+
   # croc_soc from a manquehue_chip run (macros/croc): GDS and LEF of the finished block, its port stub, and its
   # PrimeTime timing models, so the chip STA times through it.
   croc_soc:

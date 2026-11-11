@@ -54,6 +54,7 @@ IGNORE_DISCONNECTED_MODULES:
 - gf180mcu_fd_io__asig_5p0
 - gf180mcu_fd_io__dvdd
 - gf180mcu_fd_io__dvss
+- gf180mcu_fd_io__dvdd_no_clamp
 - gf180mcu_fd_io__brk5
 - gf180mcu_ws_ip__qrcode_id
 - gf180mcu_ws_ip__shuttle_id
