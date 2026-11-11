@@ -86,23 +86,23 @@ place_pad -row IO_EAST -location 1923.5 pad_testmode_i -master gf180mcu_fd_io__i
 place_pad -row IO_EAST -location 2023.5 pad_ref_clk_i -master gf180mcu_fd_io__in_s  ;# pad 71
 place_pad -row IO_EAST -location 2123.5 pad_rst_ni -master gf180mcu_fd_io__in_c  ;# pad 72
 place_pad -row IO_EAST -location 2223.5 pad_ps3_vss_e -master gf180mcu_fd_io__dvss  ;# pad 73
-place_pad -row IO_EAST -location 2323.5 pad_PS3_Vc_0 -master gf180mcu_fd_io__asig_5p0  ;# pad 74
-place_pad -row IO_EAST -location 2423.5 pad_PS3_Vc_1 -master gf180mcu_fd_io__asig_5p0  ;# pad 75
-place_pad -row IO_EAST -location 2523.5 pad_PS3_Vc_2 -master gf180mcu_fd_io__asig_5p0  ;# pad 76
-place_pad -row IO_EAST -location 2623.5 pad_PS3_Vc_3 -master gf180mcu_fd_io__asig_5p0  ;# pad 77
+place_pad -row IO_EAST -location 2323.5 pad_PS3_Vc_0 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 74
+place_pad -row IO_EAST -location 2423.5 pad_PS3_Vc_1 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 75
+place_pad -row IO_EAST -location 2523.5 pad_PS3_Vc_2 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 76
+place_pad -row IO_EAST -location 2623.5 pad_PS3_Vc_3 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 77
 place_pad -row IO_EAST -location 2723.5 pad_ps3_vdd_e -master gf180mcu_fd_io__dvdd  ;# pad 78
 place_pad -row IO_EAST -location 2823.5 pad_test_vss -master gf180mcu_fd_io__dvss  ;# pad 79
 place_pad -row IO_EAST -location 2923.5 pad_ps2_vss_e -master gf180mcu_fd_io__dvss  ;# pad 80
-place_pad -row IO_EAST -location 3023.5 pad_PS2_Vc_0 -master gf180mcu_fd_io__asig_5p0  ;# pad 81
-place_pad -row IO_EAST -location 3123.5 pad_PS2_Vc_1 -master gf180mcu_fd_io__asig_5p0  ;# pad 82
-place_pad -row IO_EAST -location 3223.5 pad_PS2_Vc_2 -master gf180mcu_fd_io__asig_5p0  ;# pad 83
-place_pad -row IO_EAST -location 3323.5 pad_PS2_Vc_3 -master gf180mcu_fd_io__asig_5p0  ;# pad 84
+place_pad -row IO_EAST -location 3023.5 pad_PS2_Vc_0 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 81
+place_pad -row IO_EAST -location 3123.5 pad_PS2_Vc_1 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 82
+place_pad -row IO_EAST -location 3223.5 pad_PS2_Vc_2 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 83
+place_pad -row IO_EAST -location 3323.5 pad_PS2_Vc_3 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 84
 place_pad -row IO_EAST -location 3423.5 pad_ps2_vdd_e -master gf180mcu_fd_io__dvdd  ;# pad 85
 place_pad -row IO_EAST -location 3523.5 pad_ps1_vss_e -master gf180mcu_fd_io__dvss  ;# pad 86
-place_pad -row IO_EAST -location 3623.5 pad_PS1_Vc_0 -master gf180mcu_fd_io__asig_5p0  ;# pad 87
-place_pad -row IO_EAST -location 3723.5 pad_PS1_Vc_1 -master gf180mcu_fd_io__asig_5p0  ;# pad 88
-place_pad -row IO_EAST -location 3823.5 pad_PS1_Vc_2 -master gf180mcu_fd_io__asig_5p0  ;# pad 89
-place_pad -row IO_EAST -location 3923.5 pad_PS1_Vc_3 -master gf180mcu_fd_io__asig_5p0  ;# pad 90
+place_pad -row IO_EAST -location 3623.5 pad_PS1_Vc_0 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 87
+place_pad -row IO_EAST -location 3723.5 pad_PS1_Vc_1 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 88
+place_pad -row IO_EAST -location 3823.5 pad_PS1_Vc_2 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 89
+place_pad -row IO_EAST -location 3923.5 pad_PS1_Vc_3 -master gf180mcu_fd_io__dvdd_no_clamp  ;# pad 90
 place_pad -row IO_EAST -location 4023.5 pad_ps1_vdd_e -master gf180mcu_fd_io__dvdd  ;# pad 91
 place_pad -row IO_EAST -location 4123.5 pad_V_REF -master gf180mcu_fd_io__asig_5p0  ;# pad 92
 place_pad -row IO_EAST -location 4223.5 pad_V_FB -master gf180mcu_fd_io__asig_5p0  ;# pad 93
@@ -133,6 +133,12 @@ place_pad -row IO_EAST -location 2908.5 brk_e2 -master gf180mcu_fd_io__brk5  ;# 
 place_pad -row IO_EAST -location 3508.5 brk_e3 -master gf180mcu_fd_io__brk5  ;# after pad 85
 place_pad -row IO_EAST -location 4108.5 brk_e4 -master gf180mcu_fd_io__brk5  ;# after pad 91
 place_pad -row IO_EAST -location 4508.5 brk_e5 -master gf180mcu_fd_io__brk5  ;# after pad 95
+place_pad -row IO_EAST -location 2308.5 brk_ps3a -master gf180mcu_fd_io__brk5  ;# after pad 73
+place_pad -row IO_EAST -location 2708.5 brk_ps3b -master gf180mcu_fd_io__brk5  ;# after pad 77
+place_pad -row IO_EAST -location 3008.5 brk_ps2a -master gf180mcu_fd_io__brk5  ;# after pad 80
+place_pad -row IO_EAST -location 3408.5 brk_ps2b -master gf180mcu_fd_io__brk5  ;# after pad 84
+place_pad -row IO_EAST -location 3608.5 brk_ps1a -master gf180mcu_fd_io__brk5  ;# after pad 86
+place_pad -row IO_EAST -location 4008.5 brk_ps1b -master gf180mcu_fd_io__brk5  ;# after pad 90
 
 place_corners $::env(PAD_CORNER)
 place_io_fill -row IO_NORTH {*}$::env(PAD_FILLERS)

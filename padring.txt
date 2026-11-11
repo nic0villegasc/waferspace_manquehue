@@ -82,23 +82,23 @@ pad 70 testmode_i in_c
 pad 71 ref_clk_i in_s
 pad 72 rst_ni in_c
 pad 73 ps3_vss_e dvss
-pad 74 PS3_Vc_0 asig_5p0
-pad 75 PS3_Vc_1 asig_5p0
-pad 76 PS3_Vc_2 asig_5p0
-pad 77 PS3_Vc_3 asig_5p0
+pad 74 PS3_Vc_0 gf180mcu_fd_io__dvdd_no_clamp
+pad 75 PS3_Vc_1 gf180mcu_fd_io__dvdd_no_clamp
+pad 76 PS3_Vc_2 gf180mcu_fd_io__dvdd_no_clamp
+pad 77 PS3_Vc_3 gf180mcu_fd_io__dvdd_no_clamp
 pad 78 ps3_vdd_e dvdd
 pad 79 test_vss dvss
 pad 80 ps2_vss_e dvss
-pad 81 PS2_Vc_0 asig_5p0
-pad 82 PS2_Vc_1 asig_5p0
-pad 83 PS2_Vc_2 asig_5p0
-pad 84 PS2_Vc_3 asig_5p0
+pad 81 PS2_Vc_0 gf180mcu_fd_io__dvdd_no_clamp
+pad 82 PS2_Vc_1 gf180mcu_fd_io__dvdd_no_clamp
+pad 83 PS2_Vc_2 gf180mcu_fd_io__dvdd_no_clamp
+pad 84 PS2_Vc_3 gf180mcu_fd_io__dvdd_no_clamp
 pad 85 ps2_vdd_e dvdd
 pad 86 ps1_vss_e dvss
-pad 87 PS1_Vc_0 asig_5p0
-pad 88 PS1_Vc_1 asig_5p0
-pad 89 PS1_Vc_2 asig_5p0
-pad 90 PS1_Vc_3 asig_5p0
+pad 87 PS1_Vc_0 gf180mcu_fd_io__dvdd_no_clamp
+pad 88 PS1_Vc_1 gf180mcu_fd_io__dvdd_no_clamp
+pad 89 PS1_Vc_2 gf180mcu_fd_io__dvdd_no_clamp
+pad 90 PS1_Vc_3 gf180mcu_fd_io__dvdd_no_clamp
 pad 91 ps1_vdd_e dvdd
 pad 92 V_REF asig_5p0
 pad 93 V_FB asig_5p0
@@ -129,11 +129,17 @@ brk brk_e2 79
 brk brk_e3 85
 brk brk_e4 91
 brk brk_e5 95
+brk brk_ps3a 73
+brk brk_ps3b 77
+brk brk_ps2a 80
+brk brk_ps2b 84
+brk brk_ps1a 86
+brk brk_ps1b 90
 seg DB_DVDD  1-7 96-108
-seg PS1_VDD  8-12 86-91
-seg PS2_VDD  13-17 80-85
+seg PS1_VDD  8-12 86 91
+seg PS2_VDD  13-17 80 85
 seg GD2_VDD  18-19
-seg PS3_VDD  20-24 73-78
+seg PS3_VDD  20-24 73 78
 seg GD3_VDD  25-26
 seg VDD      27-72
 seg TEST_VDD 79
