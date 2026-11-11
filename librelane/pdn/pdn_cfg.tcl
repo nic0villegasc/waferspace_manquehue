@@ -20,6 +20,13 @@ source $::env(SCRIPTS_DIR)/openroad/common/io.tcl
 source $::env(SCRIPTS_DIR)/openroad/common/set_global_connections.tcl
 set_global_connections
 
+# Croc chip: PDN_ENABLE_GLOBAL_CONNECTIONS is off (one supply net per ring segment, from chip_top.sv), so the core
+# cells (tie cells, taps, fillers) and croc_soc get VDD and VSS here. The pad ring cells keep their segment nets.
+foreach {pin net type} {VDD VDD -power VNW VDD -power VSS VSS -ground VPW VSS -ground} {
+    add_global_connection -net $net -inst_pattern {^(?!pad_|brk_|IO_|u_8|u_DB).*} -pin_pattern "^${pin}\$" $type
+}
+global_connect
+
 set secondary []
 foreach vdd $::env(VDD_NETS) gnd $::env(GND_NETS) {
     if { $vdd != $::env(VDD_NET)} {

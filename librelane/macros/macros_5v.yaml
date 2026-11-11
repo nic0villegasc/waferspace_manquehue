@@ -100,11 +100,10 @@ MACROS:
       "*_ss_125C_4v50":
         - dir::../croc_macro/etm/croc_soc_slow.lib
     instances:
-      # AC3E padframe: centred in x between the pads (die 1936 um, macro 1100 um wide), lower edge at y = 442,
-      # 38 um above the core edge. croc_soc places its pins for exactly this position (manquehue_chip
-      # scripts/02_floorplan.tcl: croc_llx, croc_lly), each one in front of its pad. The rows below the macro stay:
-      # with no rows below it, detailed placement failed (DPL-0036) on the buffers that repair_design puts inside
-      # the macro footprint.
+      # Croc chip: lower-left corner of the core, so the DC-DC wrappers fit above it (croc_soc ends at y = 2202.32)
+      # and the tie cells have rows east of it. Its pins were placed for an earlier pad position, so some wires run
+      # along the macro edge.
       i_chip_core.i_croc_soc:
-        location: [418, 442]
+        location: [392, 404]
         orientation: N
+

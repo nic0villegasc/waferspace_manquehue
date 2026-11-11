@@ -1,13 +1,12 @@
-# Slot for the AC3E padframe (TO-GF180MCU-AC3E-2026_V1, 04_chip_top/padframe, proposal 2026-10-19_croc_shared_spi):
-# the custom 108-pad 0p5x1 ring, DC-DC in the north half, CROC on pads 35 to 75 of the south half.
-# Pad lists and librelane/padframe/pad_cfg.tcl come from the AC3E generator (generate_padframe.py) unchanged.
+# Slot for the AC3E pad ring of the croc chip: 108 pads, 12 breakers, DC-DC in the north, croc_soc on the CROC
+# segment (pads 27 to 72). The pad lists below and librelane/padframe/pad_cfg.tcl come from scripts/gen_chip_ring.py.
 
 # Floorplanning
 FP_SIZING: absolute
 DIE_AREA: [0, 0, 1936, 5122]
-# The pads end 376 um from the die edge. The core starts 28 um inside them, room for the narrow core ring
-# (config.yaml), and is wide enough for the 1100 um croc_soc macro at x = 418.
-CORE_AREA: [404, 404, 1532, 4718]
+# Croc chip: rows only below the DC-DC wrappers (croc_soc ends at 2202.32, the 14 um core ring at 2220, 8_segs_wrapper
+# starts at 2224.36). 2 um between the core ring and the pads, rows for the tie cells east of croc_soc.
+CORE_AREA: [392, 404, 1544, 2206]
 
 VERILOG_DEFINES: ["SLOT_AC3E"]
 
@@ -47,45 +46,51 @@ PAD_EAST: [
     pad_testmode_i,
     pad_ref_clk_i,
     pad_rst_ni,
-    pad_clk_i,
-    pad_CROC_vss_4,
-    pad_CROC_vdd_4,
-    pad_unused_76,
-    pad_unused_77,
-    pad_unused_78,
-    pad_unused_79,
-    pad_unused_80,
-    pad_unused_81,
-    pad_unused_82,
-    pad_digital_vss_2,
-    pad_digital_vdd_2,
-    pad_CH_sel,
-    pad_digital_vdd_3,
-    pad_digital_vss_3,
-    pad_VCO_sel,
+    brk_e0,
+    pad_ps3_vss_e,
+    pad_PS3_Vc_0,
+    pad_PS3_Vc_1,
+    pad_PS3_Vc_2,
+    pad_PS3_Vc_3,
+    pad_ps3_vdd_e,
+    brk_e1,
+    pad_test_vss,
+    brk_e2,
+    pad_ps2_vss_e,
+    pad_PS2_Vc_0,
+    pad_PS2_Vc_1,
+    pad_PS2_Vc_2,
+    pad_PS2_Vc_3,
+    pad_ps2_vdd_e,
+    brk_e3,
+    pad_ps1_vss_e,
+    pad_PS1_Vc_0,
+    pad_PS1_Vc_1,
+    pad_PS1_Vc_2,
+    pad_PS1_Vc_3,
+    pad_ps1_vdd_e,
+    brk_e4,
+    pad_V_REF,
+    pad_V_FB,
+    pad_vco_vss,
+    pad_vco_vdd,
+    brk_e5,
     pad_PWM_sel,
-    pad_Sat_sel,
-    pad_Diff_sel,
-    pad_CH_sel0,
-    pad_CH_out_sel1,
-    pad_CH_out_sel0,
-    pad_VCO_vss,
-    pad_VCO_vdd,
-    pad_V_REF
+    pad_VCO_sel
 ]
 
 PAD_NORTH: [
-    pad_CH3_IN2,
-    pad_CHx_PD,
-    pad_CHx_VCOF,
-    pad_CHx_VCOR,
-    pad_digital_vss_4,
-    pad_digital_vdd_4,
-    pad_VCDLF,
-    pad_VCDLR,
-    pad_VCOF,
-    pad_VCOR,
-    pad_V_FB
+    pad_CH2_in2,
+    pad_CH2_in1,
+    pad_CH1_in2,
+    pad_CH1_in1,
+    pad_db_dvdd,
+    pad_db_dvss,
+    pad_CH_sel,
+    pad_CH_out_sel1,
+    pad_CH_out_sel0,
+    pad_Seg_sel1,
+    pad_Seg_sel0
 ]
 
 PAD_WEST: [
@@ -98,7 +103,7 @@ PAD_WEST: [
     pad_scan_en_i,
     pad_rf_dio0_i,
     pad_rf_rstn_o,
-    pad_unused_34,
+    pad_clk_i,
     pad_unused_33,
     pad_unused_32,
     pad_unused_31,
@@ -106,30 +111,36 @@ PAD_WEST: [
     pad_unused_29,
     pad_unused_28,
     pad_unused_27,
-    pad_unused_26,
-    pad_unused_25,
-    pad_unused_24,
-    pad_unused_23,
-    pad_CH1_Vc,
-    pad_CH2_Vc,
-    pad_CH3_Vc,
-    pad_PS1_VDD,
-    pad_PS2_VDD,
-    pad_PS3_VDD,
-    pad_PS1_VSS,
-    pad_PS2_VSS,
-    pad_PS3_VSS,
-    pad_digital_vss_1,
-    pad_digital_vdd_1,
-    pad_GD_vdd,
-    pad_GD_vss,
-    pad_CHx_Vg1,
-    pad_CHx_Vg2,
-    pad_CHx_Vs1,
+    brk_w0,
+    pad_gd3_vdd,
+    pad_gd3_vss,
+    brk_w1,
+    pad_ps3_vss_w0,
+    pad_ps3_vss_w1,
+    pad_ps3_vdd_w0,
+    pad_ps3_vdd_w1,
+    pad_ps3_vdd_w2,
+    brk_w2,
+    pad_gd2_vdd,
+    pad_gd2_vss,
+    brk_w3,
+    pad_ps2_vss_w0,
+    pad_ps2_vss_w1,
+    pad_ps2_vdd_w0,
+    pad_ps2_vdd_w1,
+    pad_ps2_vdd_w2,
+    brk_w4,
+    pad_ps1_vss_w0,
+    pad_ps1_vss_w1,
+    pad_ps1_vdd_w0,
+    pad_ps1_vdd_w1,
+    pad_ps1_vdd_w2,
+    brk_w5,
+    pad_CHx_VCOR,
+    pad_CHx_VCOF,
+    pad_CHx_PD,
     pad_CHx_Vs2,
-    pad_CH1_IN1,
-    pad_CH1_IN2,
-    pad_CH2_IN1,
-    pad_CH2_IN2,
-    pad_CH3_IN1
+    pad_CHx_Vs1,
+    pad_CH3_in2,
+    pad_CH3_in1
 ]
