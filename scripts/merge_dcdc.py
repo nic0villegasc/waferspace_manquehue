@@ -38,6 +38,11 @@ for inst in top.each_inst():
         pads.insert(inst.bbox())
 pads.merge()
 m2 = chip.layer(36, 0)
+# Metal2 jogs (chip coordinates, after the shift): (layout, wire x0, wire x1, pin x0, pin x1, pad edge y).
+# Two DB_VCO_wrapper wires to top bi_24t pads end 0.5 um left of their pin (IE at x 734, CS at x 1142) and 0.15 um
+# from the next pin (M2.2a). The wire end above edge-1 um goes, and a 0.38 um jog takes it onto the pin, 0.5 um in.
+JOGS = [("DB_VCO_wrapper", 733.36, 733.74, 733.885, 734.265, 4746.0),
+        ("DB_VCO_wrapper", 1141.385, 1141.765, 1141.86, 1142.24, 4746.0)]
 for w in WRAPPERS:
     ly = pya.Layout()
     ly.read("%s/%s.gds" % (gds_dir, w))
@@ -60,6 +65,18 @@ for w in WRAPPERS:
     after = before if globals().get("clip", "0") == "0" else before - pads.moved(-int(round(dx / chip.dbu)), -int(round(dy / chip.dbu)))
     tgt.shapes(m2).clear()
     tgt.shapes(m2).insert(after)
+    for (jw, wx0, wx1, px0, px1, ey) in JOGS:
+        if jw != w:
+            continue
+        T = pya.DTrans(pya.DVector(-dx, -dy))      # chip -> layout coordinates
+        R = lambda x0, y0, x1, y1: pya.Region((T * pya.DBox(x0, y0, x1, y1)).to_itype(chip.dbu))
+        cur = pya.Region(tgt.shapes(m2))
+        cur = cur - R(wx0, ey - 1.0, wx1, ey + 2.0)
+        cur = cur + R(wx0, ey - 1.38, px1, ey - 1.0) + R(px0, ey - 1.38, px1, ey + 0.5)
+        cur.merge()
+        tgt.shapes(m2).clear()
+        tgt.shapes(m2).insert(cur)
+        print("INFO: %s Metal2 jog at x %.2f onto the pin at x %.3f" % (w, wx0, px0))
     dx, dy = SHIFT.get(w, (0.0, 0.0))
     top.insert(pya.DCellInstArray(tgt.cell_index(), pya.DTrans(pya.DVector(dx, dy))))
     print("INFO: %s Metal2 cut at %d pad cells: %.2f um2 removed" % (w, pads.count(), (before.area() - after.area()) * 1e-6))
