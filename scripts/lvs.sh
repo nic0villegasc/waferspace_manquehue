@@ -26,6 +26,12 @@ echo "[LVS] run $RUN, $THR workers, results in $O"
 # Schematic: the chip netlist without the wafer.space IDs, croc_soc as a black box
 grep -v "gf180mcu_ws_ip__" "$RUN/final/pnl/chip_top.pnl.v" > "$O/chip_top.v"
 python3 "$L/bb_cdl.py" "$T/macros/croc/croc_soc_bb.v" > "$O/croc_soc_bb.cdl"
+# Own pad cells (macros/pad_custom/<cell>.v): black boxes with the ports of their Verilog stub
+PAD_CDL=""
+for v in "$T"/macros/pad_custom/*.v; do
+    [ -e "$v" ] || continue
+    c="$O/$(basename "$v" .v)_bb.cdl"; python3 "$L/bb_cdl.py" "$v" > "$c"; PAD_CDL="$PAD_CDL $c"
+done
 
 # Standard cells: VPW folded into VSS and the device names of the deck (as manquehue_chip make lvs)
 python3 "$L/fold_wells.py" --tie VPW=VSS --rename-model nfet_05v0=nmos_5p0 --rename-model pfet_05v0=pmos_5p0 \
@@ -33,7 +39,7 @@ python3 "$L/fold_wells.py" --tie VPW=VSS --rename-model nfet_05v0=nmos_5p0 --ren
 
 IO_CDL=$KIT/gf180mcu_fd_io/cdl/gf180mcu_fd_io.cdl
 BB_ARGS=""
-for c in "$O/croc_soc_bb.cdl" $IO_CDL; do BB_ARGS="$BB_ARGS --blackbox-cdl $c"; done
+for c in "$O/croc_soc_bb.cdl" $PAD_CDL $IO_CDL; do BB_ARGS="$BB_ARGS --blackbox-cdl $c"; done
 python3 "$L/verilog2spice.py" -v "$O/chip_top.v" -c "$O/sc7t.folded.cdl" $BB_ARGS -o "$O/chip_top.sp" \
     > "$O/verilog2spice.log" 2>&1 || { tail -20 "$O/verilog2spice.log"; exit 1; }
 

@@ -97,14 +97,20 @@ ringcheck: pdk fetch
 	  > $(O)/ringcheck.log 2>&1 || { tail -20 $(O)/ringcheck.log; exit 1; }
 	python3 $(T)/scripts/ringcheck.py $(T)/padring.txt $(O)/ringcheck/18-odb-manualmacroplacement/chip_top.def
 
+# The antenna check and repair after global routing are skipped: with the no-clamp pads (POWER pins on the Vc
+# outputs) the OpenROAD antenna checker does not load the global route guides and stops with ANT-0008. The antenna
+# check after detailed routing still runs.
+CHIP_SKIP := --skip OpenROAD.CheckAntennas --skip OpenROAD.RepairAntennas
 chip: pdk fetch
 	@mkdir -p $(O)
-	$(NIX) "librelane $(LL_CONFIGS) $(LL_OPTS)" 2>&1 | tee $(O)/chip_run.log
+	$(NIX) "librelane $(LL_CONFIGS) $(LL_OPTS) $(CHIP_SKIP)" 2>&1 | tee $(O)/chip_run.log
 
+# DB_VCO_wrapper 0.5 um up to meet the pad pins (see scripts/merge_dcdc.py)
+DCDC_SHIFT ?= DB_VCO_wrapper:0,0.5
 merge: fetch
 	@mkdir -p $(O)
 	$(NIX) "klayout -b -r $(T)/scripts/merge_dcdc.py -rd input=$(CR)/final/gds/chip_top.gds \
-	  -rd output=$(CR)/final/gds/chip_top_dcdc.gds -rd gds_dir=$(DCDC)" 2>&1 | tee $(O)/merge.log
+	  -rd output=$(CR)/final/gds/chip_top_dcdc.gds -rd gds_dir=$(DCDC) -rd shift=$(DCDC_SHIFT)" 2>&1 | tee $(O)/merge.log
 
 # The chip GLS uses manquehue_chip's test bench: skipped without a checkout (CROC=<checkout>).
 gls: fetch
