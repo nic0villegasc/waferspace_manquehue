@@ -35,7 +35,7 @@ NIX        := cd $(T) && nix-shell --run
 PDK_ROOT   ?= $(T)/gf180mcu
 PDK        ?= gf180mcuD
 PDK_COMMIT ?= f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7
-LL_CONFIGS := librelane/slots/slot_ac3e.yaml librelane/macros/macros.yaml librelane/config.yaml
+LL_CONFIGS := librelane/slot.yaml librelane/macros.yaml librelane/config.yaml
 LL_OPTS    := --pdk $(PDK) --pdk-root $(PDK_ROOT) --manual-pdk --scl gf180mcu_fd_sc_mcu7t5v0 --pad gf180mcu_fd_io
 CHIP_GLS   := TB=tb_chip_ac3e bash $(CROC)/scripts/sim/run_chip_gls.sh $(CR)/final/pnl/chip_top.pnl.v $(MACRO)/croc_soc.v
 
