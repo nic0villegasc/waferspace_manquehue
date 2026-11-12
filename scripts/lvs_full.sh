@@ -46,6 +46,7 @@ REAL="-c $O/sc7t.cdl -c $O/DB_V0.sp -c $O/VCOs_wrapper.sp -c $O/Seg8_PS_V0.sp"
 if [ "$CROC" = flat ]; then
     python3 "$L/verilog2spice.py" -v "$T/macros/croc/croc_soc.v" -c "$O/sc7t.cdl" $(for c in $SRAM_CDL; do echo --blackbox-cdl $c; done) \
         -o "$O/croc_soc.sp" > "$O/v2s_croc.log" 2>&1 || { tail -5 "$O/v2s_croc.log"; exit 1; }
+    sed -i "/^\.INCLUDE/Id" "$O/croc_soc.sp"      # sc7t.cdl comes in once, through chip_top.sp
     REAL="$REAL -c $O/croc_soc.sp"
 else
     BB_ARGS="$BB_ARGS --blackbox-cdl $O/croc_soc_bb.cdl"

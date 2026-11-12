@@ -46,7 +46,8 @@ ROUTES = [("DB_VCO_wrapper", 1523.59, 4255.66, 1560.5, 4265.66),     # V_FB: acr
           ("DB_VCO_wrapper", 1513.59, 4152.0, 1518.59, 4489.38),     # V_REF: down from its end
           ("DB_VCO_wrapper", 1513.59, 4152.0, 1560.5, 4162.0)]       # V_REF: across to pad 92
 # V_FB reaches the top of its own Metal2 wire (x 1523.59-1528.59, y 4260.7-4589.4) on Metal3, ending at x 1523.585
-# with no via. Its Metal3 end goes over the wire top and a via2 array (0.26 um, pitch 0.52) joins them.
+# with no via. Its Metal3 end goes over the wire top and a via2 array (0.26 um, space 0.36: V2.2b for arrays
+# of 4 x 4 or more) joins them.
 ROUTES_M3 = [("DB_VCO_wrapper", 1518.0, 4584.39, 1528.59, 4589.39)]
 VIA2 = [("DB_VCO_wrapper", 1523.85, 4584.65, 1528.33, 4589.13)]
 for w in WRAPPERS:
@@ -89,8 +90,8 @@ for w in WRAPPERS:
             x = x0
             while x + 0.26 <= x1 + 1e-6:
                 tgt.shapes(chip.layer(38, 0)).insert(pya.DBox(x - dx, y - dy, x + 0.26 - dx, y + 0.26 - dy))
-                x += 0.52; n += 1
-            y += 0.52
+                x += 0.62; n += 1
+            y += 0.62
         print("INFO: %s via2 array of %d at (%.2f,%.2f)" % (w, n, x0, y0))
     top.insert(pya.DCellInstArray(tgt.cell_index(), pya.DTrans(pya.DVector(dx, dy))))
     print("INFO: %s Metal2 cut at %d pad cells: %.2f um2 removed" % (w, pads.count(), (before.area() - after.area()) * 1e-6))
