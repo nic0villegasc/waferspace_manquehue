@@ -2009,6 +2009,15 @@ schematic.combine_devices
 # flattened by align (seen on the AC3E chip, KLayout 0.30.9). purge_nets stays.
 schematic.purge_nets
 
+# Optional relative W tolerance for the MOS classes (env LVS_W_TOL, e.g. 0.01), for block checks of a
+# schematic that is older than its layout. Off when not set.
+if ENV["LVS_W_TOL"].to_s != ""
+  wt = ENV["LVS_W_TOL"].to_f
+  %w(nmos_5p0 pmos_5p0 nmos_5p0_dw pmos_5p0_dw nmos_3p3 pmos_3p3 nmos_6p0 pmos_6p0).each do |c|
+    tolerance(c, "W", 0.0, wt)
+  end
+  logger.info("MOS W tolerance %g (LVS_W_TOL)" % wt)
+end
 #=== IGNORE EXTREME VALUES ===
 max_res(1e7)
 min_caps(1e-16)
