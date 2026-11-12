@@ -135,15 +135,18 @@ gls-adc gls-radio: gls-%:
 	  VVP_ARGS=+flash=$(CROC)/sim/sw/flash/bin/spi_$*.flash.hex $(CHIP_GLS) $(O)/gls_$*" 2>&1 | tee $(O)/gls_$*.log
 
 # The wafer.space precheck, cloned at PRECHECK_REV into .tools/ with the PDK revision it pins (its make clone-pdk).
+# It runs in the flake of the precheck repository (nix develop), as on the wafer.space platform. The KLayout of
+# the nix-shell of this repository gives other DRC results (M1.2b). Same ID, workers and threads as the platform.
+PRECHECK_ID ?= G803ABCE
 $(PRECHECK)/precheck.py:
 	git clone -q https://github.com/wafer-space/gf180mcu-precheck.git $(PRECHECK)
 	git -C $(PRECHECK) checkout -q $(PRECHECK_REV)
 
 precheck: $(PRECHECK)/precheck.py
 	@mkdir -p $(O)/precheck
-	$(NIX) "make -C $(PRECHECK) clone-pdk && cd $(PRECHECK) && PDK_ROOT=$(PRECHECK)/gf180mcu PDK=gf180mcuD \
-	  python3 precheck.py --input $(CHIP_GDS) --top chip_top --slot 0p5x1 --workers 2 --threads 5 \
-	  --output $(O)/precheck/chip_top.oas" 2>&1 | tee $(O)/precheck/precheck.log || true
+	cd $(PRECHECK) && nix --extra-experimental-features "nix-command flakes" develop --accept-flake-config --command bash -c \
+	  "make clone-pdk && PDK_ROOT=$(PRECHECK)/gf180mcu PDK=gf180mcuD python3 precheck.py --input $(CHIP_GDS) --top chip_top \
+	  --slot 0p5x1 --id $(PRECHECK_ID) --workers 6 --threads 1 --output $(O)/precheck/chip_top.oas" 2>&1 | tee $(O)/precheck/precheck.log || true
 	@grep -q "Precheck successfully completed" $(O)/precheck/precheck.log && echo "precheck: PASS" \
 	  || { echo "precheck: FAIL, see $(O)/precheck/precheck.log"; exit 1; }
 

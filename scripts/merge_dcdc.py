@@ -50,6 +50,11 @@ ROUTES = [("DB_VCO_wrapper", 1523.59, 4255.66, 1560.5, 4265.66),     # V_FB: acr
 # of 4 x 4 or more) joins them.
 ROUTES_M3 = [("DB_VCO_wrapper", 1518.0, 4584.39, 1528.59, 4589.39)]
 VIA2 = [("DB_VCO_wrapper", 1523.85, 4584.65, 1528.33, 4589.13)]
+# Metal1 in the bottom-left corner of the first guard-ring opening of every p_mirror (VCO stages, 14 placements),
+# in p_mirror coordinates. The p_inv plate next to it ends 0.1 um before the opening edge, and KLayout 0.30.12 with
+# Ruby 3.4 (the precheck flake, the wafer.space platform) gives a false M1.2b space of 0.1 um at that corner. The box
+# joins only the guard ring, its strip and the via_dev Metal1 that already touch: one net, no new connection.
+M1_CORNER = [("p_mirror", 26.08, 0.7, 26.18, 1.21)]
 for w in WRAPPERS:
     ly = pya.Layout()
     ly.read("%s/%s.gds" % (gds_dir, w))
@@ -93,6 +98,15 @@ for w in WRAPPERS:
                 x += 0.62; n += 1
             y += 0.62
         print("INFO: %s via2 array of %d at (%.2f,%.2f)" % (w, n, x0, y0))
+    for (cn, x0, y0, x1, y1) in M1_CORNER:
+        cells = [c.cell_index() for c in chip.each_cell() if c.name in (cn, "%s__%s" % (w, cn))]
+        it = tgt.begin_instances_rec(); n = 0
+        while not it.at_end():
+            if it.inst_cell().cell_index() in cells:
+                tgt.shapes(chip.layer(34, 0)).insert((it.dtrans() * it.inst_dtrans()) * pya.DBox(x0, y0, x1, y1)); n += 1
+            it.next()
+        if n:
+            print("INFO: %s Metal1 corner box in %d %s" % (w, n, cn))
     top.insert(pya.DCellInstArray(tgt.cell_index(), pya.DTrans(pya.DVector(dx, dy))))
     print("INFO: %s Metal2 cut at %d pad cells: %.2f um2 removed" % (w, pads.count(), (before.area() - after.area()) * 1e-6))
     print("INFO: %s at %s, %d zero-area shapes dropped" % (w, tgt.dbbox(), zero))
