@@ -9,8 +9,9 @@
 #   make ringcheck              quick check of the pad ring (a few minutes): placed as padring.txt says
 #   make chip                   LibreLane: pad ring, croc_soc, wires (30 to 60 min)
 #   make merge                  DC-DC layouts (DCDC) into the chip GDS: chip_top_dcdc.gds
+#   make fill                   COMP fill over chip_top_dcdc.gds for DCF.1a: chip_top_fill.gds
 #   make gls                    chip GLS: JTAG boot, flash + ADC read, flash + radio (gls-jtag, gls-adc, gls-radio)
-#   make precheck               wafer.space precheck of the merged GDS
+#   make precheck               wafer.space precheck (9b4e7da, open_pdks 792ef67) of the filled GDS
 #   make lvs                    chip LVS without the DC-DC layouts: pads, ties, croc_soc pins (out/lvs/)
 #   make lvs-full               full-chip transistor LVS with the DC-DC, croc_soc as pin abstract (out/lvs_full_abstract/)
 #   make lvs-croc               croc_soc alone at transistor level, SRAMs as black boxes (out/lvs_croc/)
@@ -32,10 +33,10 @@ MACRO      := $(T)/macros/croc
 CHIP_RUN   ?= $(shell ls -t $(T)/librelane/runs 2>/dev/null | head -1)
 CR         := $(T)/librelane/runs/$(CHIP_RUN)
 DCDC       ?= $(T)/macros/dcdc
-CHIP_GDS    = $(if $(wildcard $(CR)/final/gds/chip_top_dcdc.gds),$(CR)/final/gds/chip_top_dcdc.gds,$(CR)/final/gds/chip_top.gds)
+CHIP_GDS    = $(firstword $(wildcard $(CR)/final/gds/chip_top_fill.gds $(CR)/final/gds/chip_top_dcdc.gds) $(CR)/final/gds/chip_top.gds)
 O          := $(T)/out
-PRECHECK   ?= $(T)/.tools/gf180mcu-precheck
-PRECHECK_REV := 8d58ff7
+PRECHECK_REV := 9b4e7da
+PRECHECK   ?= $(T)/.tools/gf180mcu-precheck-$(PRECHECK_REV)
 # GitHub repository for make publish: this repository's own origin
 REPO       ?= $(shell git -C $(T) remote get-url origin 2>/dev/null | sed -E 's|.*github.com[:/]||; s|[.]git$$||')
 TOOLBOX    := /opt/librelane-templates/activate/gf.sh
@@ -49,12 +50,12 @@ LL_CONFIGS := librelane/slot.yaml librelane/macros.yaml librelane/config.yaml
 LL_OPTS    := --pdk $(PDK) --pdk-root $(PDK_ROOT) --manual-pdk --scl gf180mcu_fd_sc_mcu7t5v0 --pad gf180mcu_fd_io
 CHIP_GLS   := TB=tb_chip_ac3e bash $(CROC)/scripts/sim/run_chip_gls.sh $(CR)/final/pnl/chip_top.pnl.v $(MACRO)/croc_soc.v
 
-.PHONY: lvs lvs-full lvs-croc help all pdk doctor fetch publish stage-croc ring ringcheck chip merge gls gls-jtag gls-adc gls-radio precheck image overlay labels view klayout openroad summary
+.PHONY: lvs lvs-full lvs-croc help all pdk doctor fetch publish stage-croc ring ringcheck chip merge fill gls gls-jtag gls-adc gls-radio precheck image overlay labels view klayout openroad summary
 .DEFAULT_GOAL := help
 help:
 	@grep "^#   make" $(T)/Makefile | sed "s/^#   /  /"
 
-all: chip merge gls precheck summary
+all: chip merge fill gls precheck summary
 
 pdk: $(PDK_ROOT)/ciel/gf180mcu/versions/$(PDK_COMMIT)/$(PDK)
 $(PDK_ROOT)/ciel/gf180mcu/versions/$(PDK_COMMIT)/$(PDK):
@@ -114,6 +115,11 @@ merge: fetch
 	$(NIX) "klayout -b -r $(T)/scripts/merge_dcdc.py -rd input=$(CR)/final/gds/chip_top.gds \
 	  -rd output=$(CR)/final/gds/chip_top_dcdc.gds -rd gds_dir=$(DCDC) -rd shift=$(DCDC_SHIFT)" 2>&1 | tee $(O)/merge.log
 
+# COMP fill (dummy active) over the merged chip for DCF.1a (tools/fill/fill_chip.rb). The metals need no fill.
+fill: fetch
+	$(NIX) "klayout -b -r $(T)/tools/fill/fill_chip.rb -rd input=$(CR)/final/gds/chip_top_dcdc.gds \
+	  -rd output=$(CR)/final/gds/chip_top_fill.gds" 2>&1 | tee $(O)/fill.log
+
 # The chip GLS uses manquehue_chip's test bench: skipped without a checkout (CROC=<checkout>).
 gls: fetch
 	@if [ -d $(CROC)/scripts/sim ]; then $(MAKE) gls-jtag gls-adc gls-radio; \
@@ -142,16 +148,16 @@ precheck: $(PRECHECK)/precheck.py
 	  || { echo "precheck: FAIL, see $(O)/precheck/precheck.log"; exit 1; }
 
 # Chip LVS of the last chip run (KLayout, tools/lvs/): see scripts/lvs.sh. THR=<workers> (default every CPU).
-# Full-chip transistor LVS with the DC-DC (scripts/lvs_full.sh): CROC=abstract (default, minutes) or
-# CROC=flat (croc_soc at transistor level, SRAMs as black boxes, flat mode, hours). Needs the block netlists
+# Full-chip transistor LVS with the DC-DC (scripts/lvs_full.sh): LVS_CROC=abstract (default, minutes) or
+# LVS_CROC=flat (croc_soc at transistor level, SRAMs as black boxes, flat mode, hours). Needs the block netlists
 # of out/blk (tools/lvs/block_lvs.sh, extract_cells.py, struct.sh) and make merge.
-CROC ?= abstract
+LVS_CROC ?= abstract
 # croc_soc on its own at transistor level (scripts/lvs_croc.sh), minutes. Together with lvs-full: every transistor.
 lvs-croc: fetch
 	$(NIX) "bash $(T)/scripts/lvs_croc.sh $(O)/lvs_croc" 2>&1 | tee $(O)/lvs_croc.log
 
 lvs-full: fetch
-	$(NIX) "CROC=$(CROC) bash $(T)/scripts/lvs_full.sh $(CR) $(O)/lvs_full_$(CROC)" 2>&1 | tee $(O)/lvs_full_$(CROC).log
+	$(NIX) "CROC=$(LVS_CROC) bash $(T)/scripts/lvs_full.sh $(CR) $(O)/lvs_full_$(LVS_CROC)" 2>&1 | tee $(O)/lvs_full_$(LVS_CROC).log
 
 lvs: fetch
 	$(NIX) "bash $(T)/scripts/lvs.sh $(CR) $(O)/lvs" 2>&1 | tee $(O)/lvs.log

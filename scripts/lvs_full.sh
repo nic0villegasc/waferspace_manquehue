@@ -4,7 +4,7 @@
 #   CROC=abstract (default): croc_soc as a pin-only abstract (its own LVS is the macro run), deep mode.
 #   CROC=flat: croc_soc at transistor level, SRAMs as black boxes, flat mode (KLayout 0.30.9 crashes in deep
 #   mode on croc_soc inside the chip). Hours: run it overnight.   THR=<workers> (default every CPU)
-# Layout: <run>/final/gds/chip_top_dcdc.gds (make merge). Schematic: scripts/full_sch.py (chip netlist with
+# Layout: <run>/final/gds/chip_top_fill.gds (make fill), else chip_top_dcdc.gds (make merge). Schematic: scripts/full_sch.py (chip netlist with
 # the DC-DC pads wired by name to DB_V0, VCOs_wrapper and 3 x Seg8_PS_V0) and the block netlists:
 #   DB_V0         cell netlist of the layout, proven equal to the source Verilog (tools/lvs/struct.sh)
 #   VCOs_wrapper  S. Sanchez VCOs_wrapper_connect.spice with the deck fix-ups (tools/lvs/block_lvs.sh)
@@ -53,7 +53,8 @@ else
 fi
 python3 "$L/verilog2spice.py" -v "$O/chip_full.v" $REAL $BB_ARGS -o "$O/chip_top.sp" > "$O/v2s_chip.log" 2>&1 || { tail -5 "$O/v2s_chip.log"; exit 1; }
 # --- layout: IO cells, own pads and SRAMs as black boxes; croc_soc abstract or full
-G=$RUN/final/gds/chip_top_dcdc.gds
+G=$RUN/final/gds/chip_top_fill.gds
+[ -f "$G" ] || G=$RUN/final/gds/chip_top_dcdc.gds
 BB="$(grep -o 'gf180mcu_fd_io__[a-z0-9_]*' "$O/chip_full.v" | sort -u | tr '\n' ',')"
 BB="$BB$(for c in $SRAM_CDL; do basename -s .cdl $c; done | tr '\n' ',')"
 if [ "$CROC" != flat ]; then
