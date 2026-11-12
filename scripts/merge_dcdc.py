@@ -65,7 +65,8 @@ for w in WRAPPERS:
         raise SystemExit("ERROR: the chip already has a cell %s" % w)
     tgt = chip.create_cell(w)
     tgt.copy_tree(ly.cell(w))
-    tgt.flatten(-1, True)
+    if globals().get("clip", "0") != "0":
+        tgt.flatten(-1, True)          # only the clip needs the layout flat; else the hierarchy stays (LVS)
     before = pya.Region(tgt.shapes(m2))
     dx, dy = SHIFT.get(w, (0.0, 0.0))
     after = before if globals().get("clip", "0") == "0" else before - pads.moved(-int(round(dx / chip.dbu)), -int(round(dy / chip.dbu)))

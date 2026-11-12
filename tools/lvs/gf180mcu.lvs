@@ -1862,6 +1862,34 @@ ignore_parameter("efuse", "R")
 logger.info("Starting GF180 LVS comparison section")
 
 #=== FLATTEN CELLS ===
+# Excluded cells (fillers, decaps, taps) go before align: align flattens cells without a schematic
+# counterpart (e.g. the prefixed cells of LibreLane macros), and their devices could not be excluded after it.
+if $exclude_from_compare
+  exclude_patterns = $exclude_from_compare.split(",").map(&:downcase)
+  [netlist, schematic].each do |nl|
+    nl.each_circuit do |parent|
+      parent.each_subcircuit.to_a.each do |sc|
+        ref_name = sc.circuit_ref&.name&.downcase
+        next unless ref_name
+        parent.remove_subcircuit(sc) if exclude_patterns.any? { |pat| ref_name.include?(pat) }
+      end
+    end
+    # the excluded cells themselves go too, or their empty definitions stay unpaired
+    nl.each_circuit.to_a.each do |c|
+      nl.remove(c) if exclude_patterns.any? { |pat| c.name.downcase.include?(pat) }
+    end
+  end
+end
+
+#=== PROTECT BLACK-BOXED MACROS FROM PURGE ===
+# A fully black-boxed hard macro (e.g. `make lvs`'s SRAM handling) has 0
+# internal devices on the layout side, and a plain purge flattens circuits
+# like that away entirely -- not just their device count going to 0, their
+# subcircuit instances vanish too (confirmed 2026-08-12). Mirrored on the
+# schematic side below, this asymmetry reads as a top-level failure even
+# though every actual net and device already matches. dont_purge=true
+# keeps the macro as a real, named, pin-matching circuit on both sides
+# instead, so it compares cleanly as the intentional black box it is.
 align
 
 #=== NETLIST EXTRACTION ===
@@ -1906,32 +1934,6 @@ end
 # is the standard treatment for exactly this class of cell in real LVS
 # signoff: they carry no function to verify, and every real signal-bearing
 # cell is still fully compared.
-if $exclude_from_compare
-  exclude_patterns = $exclude_from_compare.split(",").map(&:downcase)
-  [netlist, schematic].each do |nl|
-    nl.each_circuit do |parent|
-      parent.each_subcircuit.to_a.each do |sc|
-        ref_name = sc.circuit_ref&.name&.downcase
-        next unless ref_name
-        parent.remove_subcircuit(sc) if exclude_patterns.any? { |pat| ref_name.include?(pat) }
-      end
-    end
-    # the excluded cells themselves go too, or their empty definitions stay unpaired
-    nl.each_circuit.to_a.each do |c|
-      nl.remove(c) if exclude_patterns.any? { |pat| c.name.downcase.include?(pat) }
-    end
-  end
-end
-
-#=== PROTECT BLACK-BOXED MACROS FROM PURGE ===
-# A fully black-boxed hard macro (e.g. `make lvs`'s SRAM handling) has 0
-# internal devices on the layout side, and a plain purge flattens circuits
-# like that away entirely -- not just their device count going to 0, their
-# subcircuit instances vanish too (confirmed 2026-08-12). Mirrored on the
-# schematic side below, this asymmetry reads as a top-level failure even
-# though every actual net and device already matches. dont_purge=true
-# keeps the macro as a real, named, pin-matching circuit on both sides
-# instead, so it compares cleanly as the intentional black box it is.
 if $blackbox_macros
   blackbox_names = $blackbox_macros.split(",").map(&:downcase)
   [netlist, schematic].each do |nl|
