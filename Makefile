@@ -13,7 +13,7 @@
 #   make gls                    chip GLS: JTAG boot, flash + ADC read, flash + radio (gls-jtag, gls-adc, gls-radio)
 #   make precheck               wafer.space precheck (9b4e7da, open_pdks 792ef67) of the filled GDS
 #   make lvs                    chip LVS without the DC-DC layouts: pads, ties, croc_soc pins (out/lvs/)
-#   make lvs-full               full-chip transistor LVS with the DC-DC, croc_soc as pin abstract (out/lvs_full_abstract/)
+#   make lvs-full               full-chip transistor LVS: DC-DC and croc_soc at transistor level, SRAMs black (out/lvs_full_full/)
 #   make lvs-croc               croc_soc alone at transistor level, SRAMs as black boxes (out/lvs_croc/)
 #   make image                  PNG of the chip GDS (out/chip_top.png)
 #   make overlay                CROC macro + DC-DC layouts only, to check how they meet (out/overlay.gds)
@@ -151,19 +151,27 @@ precheck: $(PRECHECK)/precheck.py
 	  || { echo "precheck: FAIL, see $(O)/precheck/precheck.log"; exit 1; }
 
 # Chip LVS of the last chip run (KLayout, tools/lvs/): see scripts/lvs.sh. THR=<workers> (default every CPU).
-# Full-chip transistor LVS with the DC-DC (scripts/lvs_full.sh): LVS_CROC=abstract (default, minutes) or
-# LVS_CROC=flat (croc_soc at transistor level, SRAMs as black boxes, flat mode, hours). Needs the block netlists
-# of out/blk (tools/lvs/block_lvs.sh, extract_cells.py, struct.sh) and make merge.
-LVS_CROC ?= abstract
+# Full-chip transistor LVS with the DC-DC (scripts/lvs_full.sh), deep mode, about 10 min: LVS_CROC=full (default,
+# croc_soc at transistor level, SRAMs as black boxes) or LVS_CROC=abstract (croc_soc as a pin abstract, 2 min).
+# LVS_CROC=flat is the old flat mode (hours). Needs the block netlists of out/blk (tools/lvs/block_lvs.sh,
+# extract_cells.py, struct.sh) and make merge. The deck logs each phase (PHASE lines in lvs.log).
+LVS_CROC ?= full
+# KLayout for the LVS targets: 0.30.13 from a pinned nixpkgs, kept in .tools/ (GC root). 0.30.9 (nix-shell) and
+# 0.30.12 corrupt their heap in the deep netlist extraction of the chip with croc_soc at transistor level.
+LVS_NIXPKGS := github:NixOS/nixpkgs/9397dcb09c9598a33509fbc0cce699bd4e6c84d5
+LVS_KLAYOUT := $(T)/.tools/klayout-lvs
+LVS_PATH    := PATH=$(LVS_KLAYOUT)/bin:\$$PATH
+$(LVS_KLAYOUT)/bin/klayout:
+	nix --extra-experimental-features "nix-command flakes" build $(LVS_NIXPKGS)#klayout -o $(LVS_KLAYOUT)
 # croc_soc on its own at transistor level (scripts/lvs_croc.sh), minutes. Together with lvs-full: every transistor.
-lvs-croc: fetch
-	$(NIX) "bash $(T)/scripts/lvs_croc.sh $(O)/lvs_croc" 2>&1 | tee $(O)/lvs_croc.log
+lvs-croc: fetch $(LVS_KLAYOUT)/bin/klayout
+	$(NIX) "$(LVS_PATH) bash $(T)/scripts/lvs_croc.sh $(O)/lvs_croc" 2>&1 | tee $(O)/lvs_croc.log
 
-lvs-full: fetch
-	$(NIX) "CROC=$(LVS_CROC) bash $(T)/scripts/lvs_full.sh $(CR) $(O)/lvs_full_$(LVS_CROC)" 2>&1 | tee $(O)/lvs_full_$(LVS_CROC).log
+lvs-full: fetch $(LVS_KLAYOUT)/bin/klayout
+	$(NIX) "$(LVS_PATH) CROC=$(LVS_CROC) bash $(T)/scripts/lvs_full.sh $(CR) $(O)/lvs_full_$(LVS_CROC)" 2>&1 | tee $(O)/lvs_full_$(LVS_CROC).log
 
-lvs: fetch
-	$(NIX) "bash $(T)/scripts/lvs.sh $(CR) $(O)/lvs" 2>&1 | tee $(O)/lvs.log
+lvs: fetch $(LVS_KLAYOUT)/bin/klayout
+	$(NIX) "$(LVS_PATH) bash $(T)/scripts/lvs.sh $(CR) $(O)/lvs" 2>&1 | tee $(O)/lvs.log
 
 image:
 	@mkdir -p $(O)

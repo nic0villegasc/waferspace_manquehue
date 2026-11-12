@@ -21,11 +21,33 @@ require "logger"
 
 exec_start_time = Time.now
 
+STDOUT.sync = true
+STDERR.sync = true
 logger = Logger.new(STDOUT)
 
 logger.formatter = proc do |severity, datetime, progname, msg|
   "#{datetime}: Memory Usage (" + `pmap #{Process.pid} | tail -1`[10,40].strip + ") : #{msg}
 "
+end
+
+# Phase log: start, end and run time of the heavy LVS steps, with the netlist size. Without it a long run
+# shows nothing after the device extraction (the output was block-buffered, too).
+def lvs_size(nl)
+  c = 0; d = 0; n = 0; s = 0
+  nl.each_circuit do |ci|
+    c += 1
+    ci.each_device { d += 1 }
+    ci.each_net { n += 1 }
+    ci.each_subcircuit { s += 1 }
+  end
+  "%d circuits, %d devices, %d nets, %d subcircuits" % [c, d, n, s]
+end
+def lvs_phase(logger, name)
+  t0 = Time.now
+  logger.info("PHASE #{name}: start")
+  r = yield
+  logger.info("PHASE #{name}: done in %.1f s" % (Time.now - t0))
+  r
 end
 
 #================================================
@@ -1860,6 +1882,22 @@ ignore_parameter("efuse", "R")
 #================================================
 
 logger.info("Starting GF180 LVS comparison section")
+lvs_phase(logger, "netlist extraction (connectivity)") { netlist }
+logger.info("layout netlist: " + lvs_size(netlist))
+lvs_phase(logger, "schematic read") { schematic }
+# ASSIGN* resistors (verilog2spice.py: Verilog assign between two ports) are wires: join their nets, drop them.
+n_assign = 0
+schematic.each_circuit do |c|
+  c.each_device.to_a.each do |d|
+    next unless d.name.to_s.upcase.start_with?("ASSIGN")
+    a = d.net_for_terminal(0); b = d.net_for_terminal(1)
+    c.remove_device(d)
+    c.join_nets(a, b) if a && b && a != b
+    n_assign += 1
+  end
+end
+logger.info("schematic: %d ASSIGN resistors joined" % n_assign) if n_assign > 0
+logger.info("schematic netlist: " + lvs_size(schematic))
 
 #=== FLATTEN CELLS ===
 # Excluded cells (fillers, decaps, taps) go before align: align flattens cells without a schematic
@@ -1890,7 +1928,9 @@ end
 # though every actual net and device already matches. dont_purge=true
 # keeps the macro as a real, named, pin-matching circuit on both sides
 # instead, so it compares cleanly as the intentional black box it is.
-align
+lvs_phase(logger, "align") { align }
+logger.info("layout netlist after align: " + lvs_size(netlist))
+logger.info("schematic netlist after align: " + lvs_size(schematic))
 
 #=== NETLIST EXTRACTION ===
 if SIMPLIFY
@@ -1944,7 +1984,7 @@ if $blackbox_macros
 end
 
 if PURGE
-  netlist.purge
+  lvs_phase(logger, "layout purge") { netlist.purge }
 end
 
 if PURGE_NETS
@@ -2010,6 +2050,8 @@ schematic.combine_devices
 # schematic.purge removed: it deletes the chip_top of a chip schematic whose cells are all black boxes or
 # flattened by align (seen on the AC3E chip, KLayout 0.30.9). purge_nets stays.
 schematic.purge_nets
+logger.info("layout netlist before compare: " + lvs_size(netlist))
+logger.info("schematic netlist before compare: " + lvs_size(schematic))
 
 # Optional relative W tolerance for the MOS classes (env LVS_W_TOL, e.g. 0.01), for block checks of a
 # schematic that is older than its layout. Off when not set.
@@ -2025,7 +2067,7 @@ max_res(1e7)
 min_caps(1e-16)
 
 
-compare
+lvs_ok = lvs_phase(logger, "compare") { compare }
 
 exec_end_time = Time.now
 run_time = exec_end_time - exec_start_time
@@ -2034,7 +2076,7 @@ logger.info("DRC Total Run time %f seconds" % [run_time])
 
 
 
-if ! compare
+if ! lvs_ok
   logger.info("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
   logger.error("ERROR : Netlists don't match")
   logger.info("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")

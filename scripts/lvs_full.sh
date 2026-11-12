@@ -1,9 +1,10 @@
 #!/bin/bash
 # Full-chip transistor LVS with the DC-DC (make lvs-full).
 # usage: scripts/lvs_full.sh <LibreLane run folder> <out folder>
-#   CROC=abstract (default): croc_soc as a pin-only abstract (its own LVS is the macro run), deep mode.
-#   CROC=flat: croc_soc at transistor level, SRAMs as black boxes, flat mode (KLayout 0.30.9 crashes in deep
-#   mode on croc_soc inside the chip). Hours: run it overnight.   THR=<workers> (default every CPU)
+#   CROC=abstract: croc_soc as a pin-only abstract (its own LVS is the macro run), deep mode, 2 min.
+#   CROC=full: croc_soc at transistor level, SRAMs as black boxes, deep mode, about 10 min. Needs KLayout
+#   0.30.13 (make lvs-full): 0.30.9 and 0.30.12 corrupt their heap in the deep netlist extraction of this chip.
+#   CROC=flat: as full, but flat mode. Hours.   THR=<workers> (default every CPU)
 # Layout: <run>/final/gds/chip_top_fill.gds (make fill), else chip_top_dcdc.gds (make merge). Schematic: scripts/full_sch.py (chip netlist with
 # the DC-DC pads wired by name to DB_V0, VCOs_wrapper and 3 x Seg8_PS_V0) and the block netlists:
 #   DB_V0         cell netlist of the layout, proven equal to the source Verilog (tools/lvs/struct.sh)
@@ -43,7 +44,7 @@ cp "$B/seg8_lw/Seg8_PS_V0.sp" "$O/Seg8_PS_V0.sp"
 python3 "$T/scripts/full_sch.py" "$RUN/final/pnl/chip_top.pnl.v" "$O/chip_full.v"
 BB_ARGS="--blackbox-cdl $IO_CDL"; for c in $PAD_CDL; do BB_ARGS="$BB_ARGS --blackbox-cdl $c"; done
 REAL="-c $O/sc7t.cdl -c $O/DB_V0.sp -c $O/VCOs_wrapper.sp -c $O/Seg8_PS_V0.sp"
-if [ "$CROC" = flat ]; then
+if [ "$CROC" != abstract ]; then
     python3 "$L/verilog2spice.py" -v "$T/macros/croc/croc_soc.v" -c "$O/sc7t.cdl" $(for c in $SRAM_CDL; do echo --blackbox-cdl $c; done) \
         -o "$O/croc_soc.sp" > "$O/v2s_croc.log" 2>&1 || { tail -5 "$O/v2s_croc.log"; exit 1; }
     sed -i "/^\.INCLUDE/Id" "$O/croc_soc.sp"      # sc7t.cdl comes in once, through chip_top.sp
@@ -57,7 +58,7 @@ G=$RUN/final/gds/chip_top_fill.gds
 [ -f "$G" ] || G=$RUN/final/gds/chip_top_dcdc.gds
 BB="$(grep -o 'gf180mcu_fd_io__[a-z0-9_]*' "$O/chip_full.v" | sort -u | tr '\n' ',')"
 BB="$BB$(for c in $SRAM_CDL; do basename -s .cdl $c; done | tr '\n' ',')"
-if [ "$CROC" != flat ]; then
+if [ "$CROC" = abstract ]; then
     klayout -b -r "$L/abstract_cell.py" -rd input="$G" -rd output="$O/chip.in.gds" -rd cell=croc_soc -rd top=chip_top > "$O/abstract.log" 2>&1
     BB="croc_soc,$BB"; G=$O/chip.in.gds
 fi

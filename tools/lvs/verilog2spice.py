@@ -319,6 +319,44 @@ def translate(args):
     top_ports = expand_top_ports(ports, widths)
     port_set = set(top_ports) | set(ports)
 
+    # assign a = b (scalar nets or bus bits): the two nets are one. An internal net is renamed to the other
+    # net. When both are ports, a marker resistor RASSIGN<n> joins them: SPICE cannot short two subckt ports,
+    # and the LVS deck (gf180mcu.lvs) joins the two nets of every ASSIGN* resistor and removes it.
+    parent = {}
+    def _find(x):
+        while parent.get(x, x) != x:
+            x = parent[x]
+        return x
+    n_assign = 0
+    for am in re.finditer(r"\bassign\s+([^=;]+?)\s*=\s*([^;]+?)\s*;", text):
+        lhs = norm_net(am.group(1), args.pos_pwr, args.neg_pwr)
+        rhs = norm_net(am.group(2), args.pos_pwr, args.neg_pwr)
+        if any(c in lhs + rhs for c in "{}()~&|^?+-") or ":" in lhs + rhs:
+            sys.stderr.write("WARN: assign not a plain net: %s = %s (ignored)\n" % (lhs, rhs))
+            continue
+        a, b = _find(lhs), _find(rhs)
+        if a != b:
+            parent[a] = b
+        n_assign += 1
+    groups = {}
+    for x in list(parent):
+        groups.setdefault(_find(x), set()).add(x)
+    for r, g in groups.items():
+        g.add(r)
+    alias = {}
+    assign_lines = []
+    rails = {args.pos_pwr, args.neg_pwr}
+    for g in groups.values():
+        fixed = sorted(x for x in g if x in port_set or x in rails)
+        rep_net = fixed[0] if fixed else sorted(g)[0]
+        for x in g:
+            if x == rep_net:
+                continue
+            if x in port_set or x in rails:
+                assign_lines.append("RASSIGN%d %s %s 0" % (len(assign_lines) + 1, rep_net, x))
+            else:
+                alias[x] = rep_net
+
     # decide which rail nets need .GLOBAL (used but not already a top port)
     def resolve_rail_net(pin):
         base = _pin_base(pin).upper()
@@ -375,6 +413,7 @@ def translate(args):
             # unknown port name on this cell -> keep as scalar (best effort)
             conn[port] = nets[0]
 
+        conn = {k: alias.get(v, v) for k, v in conn.items()}
         # emit nets in subckt pin order
         row = []
         for pin in sc.pins:
@@ -436,6 +475,7 @@ def translate(args):
 
     out.append(".SUBCKT %s %s" % (mod_name, " ".join(top_ports)))
     out.extend(inst_lines)
+    out.extend(assign_lines)
     out.append(".ENDS %s" % mod_name)
     out.append("")
 
@@ -448,6 +488,9 @@ def translate(args):
     r("  subckts parsed from CDL : %d\n" % len(subckts))
     r("  instances translated    : %d\n" % n_inst)
     r("  distinct cells used      : %d\n" % len(used_libs))
+    if n_assign:
+        r("  assign statements        : %d (%d nets renamed, %d ASSIGN resistors between ports)\n"
+          % (n_assign, len(alias), len(assign_lines)))
     if unconn:
         r("  unconnected signal pins  : %d  (tied to per-instance *_UNCONN nets)\n"
           % unconn)

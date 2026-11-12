@@ -130,7 +130,8 @@ def main():
             print("The script must be given a netlist file or a path to be able to run LVS")
             exit()
 
-        os.system(f"klayout -b -r {LVS_DECK} -rd input={path} -rd report={report_path} -rd schematic={args['--net']} -rd target_netlist={target_netlist_path} -rd thr={workers_count} {switches}")
+        dbg = f"-d {os.environ['LVS_KLAYOUT_DEBUG']} " if os.environ.get('LVS_KLAYOUT_DEBUG') else ''
+        os.system(f"klayout -b {dbg}-r {LVS_DECK} -rd input={path} -rd report={report_path} -rd schematic={args['--net']} -rd target_netlist={target_netlist_path} -rd thr={workers_count} {switches}")
 
     else:
         print("The script must be given a layout file or a path to be able to run LVS")
